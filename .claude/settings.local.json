@@ -2,9 +2,24 @@
   "permissions": {
     "allow": [
       "Bash(pnpm add:*)",
-      "Bash(pnpm dlx:*)"
+      "Bash(pnpm dlx:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm remove:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm list:*)",
+      "WebSearch",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm build:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/zhangxiangchen/Code/demo/transformers.js-examples"
+    ]
   }
 }
