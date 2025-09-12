@@ -1,7 +1,6 @@
 // 字幕历史管理 Zustand Store
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { useMemo } from 'react'
 import type { SubtitleChunk, SubtitleTranscript } from '@/types/subtitle'
 
 interface Chunk extends SubtitleChunk {
@@ -355,37 +354,25 @@ export const useHistoryStore = create<HistoryState & HistoryActions>()(
   )
 );
 
-// 便捷的选择器hooks
-export const useHistoryState = () => useHistoryStore((state) => ({
-  chunks: state.chunks,
-  text: state.text,
-  duration: state.duration,
-  language: state.language,
-  canUndo: state.canUndo,
-  canRedo: state.canRedo,
-}));
+// 独立的状态选择器，避免创建新对象引用
+export const useCanUndo = () => useHistoryStore(state => state.canUndo);
+export const useCanRedo = () => useHistoryStore(state => state.canRedo);
 
-export const useHistoryActions = () => useHistoryStore((state) => ({
-  setTranscript: state.setTranscript,
-  update: state.update,
-  delete: state.delete,
-  undo: state.undo,
-  redo: state.redo,
-  clearHistory: state.clearHistory,
-  deleteSelected: state.deleteSelected,
-  restoreSelected: state.restoreSelected,
-  reset: state.reset,
-}));
+// 独立的动作选择器，避免创建新对象引用
+export const useSetTranscript = () => useHistoryStore(state => state.setTranscript);
+export const useUpdate = () => useHistoryStore(state => state.update);
+export const useDelete = () => useHistoryStore(state => state.delete);
+export const useUndo = () => useHistoryStore(state => state.undo);
+export const useRedo = () => useHistoryStore(state => state.redo);
+export const useClearHistory = () => useHistoryStore(state => state.clearHistory);
+export const useDeleteSelected = () => useHistoryStore(state => state.deleteSelected);
+export const useRestoreSelected = () => useHistoryStore(state => state.restoreSelected);
+export const useResetHistory = () => useHistoryStore(state => state.reset);
 
 // 获取所有chunks（在组件中使用 useMemo 过滤）
 export const useChunks = () => useHistoryStore(state => state.chunks);
 
-// 获取转录对象（兼容现有接口）
-export const useTranscript = () => {
-  return useHistoryStore((state) => ({
-    text: state.text,
-    chunks: state.chunks, // 返回所有chunks，让调用者决定如何过滤
-    language: state.language,
-    duration: state.duration,
-  }));
-};
+// 独立的选择器，避免创建新对象引用
+export const useHistoryText = () => useHistoryStore(state => state.text);
+export const useHistoryLanguage = () => useHistoryStore(state => state.language);
+export const useHistoryDuration = () => useHistoryStore(state => state.duration);

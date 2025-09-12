@@ -2,9 +2,14 @@
 import { useMemo, useCallback } from 'react';
 import { 
   useHistoryStore,
-  useHistoryState,
-  useHistoryActions,
-  useChunks
+  useChunks,
+  useHistoryText,
+  useHistoryDuration,
+  useCanUndo,
+  useCanRedo,
+  useUndo,
+  useRedo,
+  useClearHistory
 } from '@/stores/historyStore';
 import { 
   calculateKeptSegments, 
@@ -16,14 +21,19 @@ import {
 import type { EditingSession } from '@/types/history';
 
 export function useEditingSession() {
-  const { chunks, text, duration, canUndo, canRedo } = useHistoryState();
-  const { undo, redo, clearHistory } = useHistoryActions();
-  const allChunks = useChunks();
+  const chunks = useChunks();
+  const text = useHistoryText();
+  const duration = useHistoryDuration();
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const undo = useUndo();
+  const redo = useRedo();
+  const clearHistory = useClearHistory();
   
   // 在 Hook 层用 useMemo 做过滤，避免无限循环
   const activeChunks = useMemo(
-    () => allChunks.filter(c => !c.deleted),
-    [allChunks]
+    () => chunks.filter(c => !c.deleted),
+    [chunks]
   );
 
   // 计算当前编辑会话状态

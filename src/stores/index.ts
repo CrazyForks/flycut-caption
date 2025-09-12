@@ -2,8 +2,19 @@
 export * from './appStore';
 export {
   useHistoryStore,
-  useHistoryState,
-  useHistoryActions,
   useChunks,
-  useTranscript as useHistoryTranscript, // 重命名避免冲突
+  useHistoryText,
+  useHistoryLanguage,
+  useHistoryDuration,
+  useCanUndo,
+  useCanRedo,
+  useSetTranscript,
+  useUpdate,
+  useDelete,
+  useUndo,
+  useRedo,
+  useClearHistory,
+  useDeleteSelected,
+  useRestoreSelected,
+  useResetHistory,
 } from './historyStore';

@@ -16,7 +16,8 @@
       "Bash(pnpm lint:*)",
       "Bash(pnpm build:*)",
       "WebFetch(domain:github.com)",
-      "Bash(pnmp run lint:*)"
+      "Bash(pnmp run lint:*)",
+      "Bash(pnmp build:*)"
     ],
     "deny": [],
     "ask": [],

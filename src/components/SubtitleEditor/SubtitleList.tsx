@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useHistoryStore, useTranscript, useChunks } from '@/stores/historyStore';
+import { useHistoryStore, useChunks, useHistoryText, useHistoryLanguage, useHistoryDuration } from '@/stores/historyStore';
 import { useAppStore } from '@/stores/appStore';
 import { formatTime, isTimeInRange } from '@/utils/timeUtils';
 import { FileText, Play, Trash2, RotateCcw, Check, Clock } from 'lucide-react';
@@ -20,8 +20,18 @@ export function SubtitleList({
   className,
   maxHeight = '400px'
 }: SubtitleListProps) {
-  const transcript = useTranscript();
   const chunks = useChunks();
+  const text = useHistoryText();
+  const language = useHistoryLanguage();
+  const duration = useHistoryDuration();
+  
+  // 在组件层用 useMemo 创建 transcript 对象，避免无限循环
+  const transcript = useMemo(() => ({
+    text,
+    chunks,
+    language,
+    duration,
+  }), [text, chunks, language, duration]);
   
   // 在组件层用 useMemo 做过滤，避免无限循环
   const activeChunks = useMemo(

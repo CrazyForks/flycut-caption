@@ -1,15 +1,29 @@
 // 字幕历史编辑器组件示例
 import { useMemo } from 'react';
 import { 
-  useHistoryState, 
-  useHistoryActions,
-  useChunks
+  useChunks,
+  useHistoryText,
+  useHistoryDuration,
+  useCanUndo,
+  useCanRedo,
+  useUpdate,
+  useDelete,
+  useUndo,
+  useRedo,
+  useClearHistory
 } from '@/stores/historyStore';
 import { Undo2, Redo2, Trash2, RotateCcw } from 'lucide-react';
 
 export function HistoryEditor() {
-  const { text, duration, canUndo, canRedo } = useHistoryState();
-  const { update, delete: deleteChunk, undo, redo, clearHistory } = useHistoryActions();
+  const text = useHistoryText();
+  const duration = useHistoryDuration();
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const update = useUpdate();
+  const deleteChunk = useDelete();
+  const undo = useUndo();
+  const redo = useRedo();
+  const clearHistory = useClearHistory();
   const chunks = useChunks();
   
   // 在组件层用 useMemo 做过滤，避免无限循环
