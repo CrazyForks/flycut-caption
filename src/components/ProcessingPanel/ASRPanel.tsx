@@ -1,9 +1,11 @@
 // ASR 处理面板组件
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useASR } from '@/hooks/useASR';
-import { useAppState } from '@/contexts/AppContext';
+import { useAppStore } from '@/stores/appStore';
+import { useHistoryStore } from '@/stores/historyStore';
+import { asrService } from '@/services/asrService';
+import type { ASRProgress } from '@/types/subtitle';
 import { readFileAsArrayBuffer } from '@/utils/fileUtils';
 import { 
   Mic, 
@@ -22,37 +24,137 @@ interface ASRPanelProps {
 }
 
 export function ASRPanel({ className }: ASRPanelProps) {
-  const state = useAppState();
-  const {
-    asrProgress,
-    language,
-    deviceType,
-    isLoading,
-    error,
-    loadModel,
-    startTranscription,
-    retryTranscription,
-    changeLanguage,
-    changeDevice,
-    isReady,
-  } = useASR();
+  const videoFile = useAppStore((state) => state.videoFile);
+  const language = useAppStore(state => state.language);
+  const deviceType = useAppStore(state => state.deviceType);
+  const asrProgress = useAppStore(state => state.asrProgress);
+  const isLoading = useAppStore(state => state.isLoading);
+  const error = useAppStore(state => state.error);
+  
+  const setASRProgress = useAppStore(state => state.setASRProgress);
+  const setError = useAppStore(state => state.setError);
+  const setLoading = useAppStore(state => state.setLoading);
+  const setLanguage = useAppStore(state => state.setLanguage);
+  const setDeviceType = useAppStore(state => state.setDeviceType);
+  
+  // 使用 historyStore 管理转录内容
+  const setTranscript = useHistoryStore(state => state.setTranscript);
+  // const transcript = useTranscript(); // 使用预定义的选择器，避免无限重渲染
+  const hasTranscriptChunks = useHistoryStore((state) => state.chunks.length > 0);
 
   const [showSettings, setShowSettings] = useState(false);
   const audioBufferRef = useRef<ArrayBuffer | null>(null);
 
-  // 准备音频数据
-  const prepareAudioData = useCallback(async () => {
-    if (!state.videoFile) return null;
+  // 设置进度回调
+  useEffect(() => {
+    const handleProgress = (progress: ASRProgress) => {
+      setASRProgress(progress);
+
+      // 处理完成状态
+      if (progress.status === 'complete' && progress.result) {
+        setTranscript(progress.result);
+      }
+
+      // 处理错误状态
+      if (progress.status === 'error') {
+        console.error('ASR处理进度错误:', progress.error);
+        setError(`ASR处理失败: ${progress.error}`);
+      }
+    };
+
+    asrService.setProgressCallback(handleProgress);
+
+    return () => {
+      asrService.setProgressCallback(() => {});
+    };
+  }, [setASRProgress, setTranscript, setError]);
+
+  // 设置设备类型
+  useEffect(() => {
+    asrService.setDevice(deviceType);
+  }, [deviceType]);
+
+  // 检查是否准备就绪
+  const isReady = useCallback(() => {
+    return asrService.isReady();
+  }, []);
+
+  // 加载模型
+  const loadModel = useCallback(async () => {
+    try {
+      setLoading(true);
+      await asrService.loadModel();
+    } catch (error) {
+      console.error('ASR模型加载失败:', error);
+      setError(error instanceof Error ? error.message : '模型加载失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setError]);
+
+  // 开始转录
+  const startTranscription = useCallback(async (audioBuffer: ArrayBuffer) => {
+    if (!videoFile) {
+      setError('请先上传视频文件');
+      return;
+    }
 
     try {
-      audioBufferRef.current = await readFileAsArrayBuffer(state.videoFile.file);
+      setLoading(true);
+      
+      // 先确保模型已准备
+      if (!asrService.isReady()) {
+        setASRProgress({ status: 'loading', data: '准备模型中...' });
+        await asrService.prepareModel();
+      }
+
+      // 然后进行转录
+      setASRProgress({ status: 'loading', data: '开始转录音频...' });
+      
+      const transcriptResult = await asrService.transcribeAudio(
+        audioBuffer,
+        language
+      );
+
+      setTranscript(transcriptResult);
+    } catch (error) {
+      console.error('ASR转录失败:', error);
+      setError(error instanceof Error ? error.message : '转录失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [videoFile, language, setLoading, setError, setASRProgress, setTranscript]);
+
+  // 重新开始转录
+  const retryTranscription = useCallback(async (audioBuffer: ArrayBuffer) => {
+    // 重置状态
+    setASRProgress({ status: 'loading', data: '准备重新转录...' });
+    await startTranscription(audioBuffer);
+  }, [startTranscription, setASRProgress]);
+
+  // 更改设备类型
+  const changeDevice = useCallback((device: 'webgpu' | 'wasm') => {
+    setDeviceType(device);
+  }, [setDeviceType]);
+
+  // 更改语言
+  const changeLanguage = useCallback((newLanguage: string) => {
+    setLanguage(newLanguage);
+  }, [setLanguage]);
+
+  // 准备音频数据
+  const prepareAudioData = useCallback(async () => {
+    if (!videoFile) return null;
+
+    try {
+      audioBufferRef.current = await readFileAsArrayBuffer(videoFile.file);
       return audioBufferRef.current;
     } catch (error) {
       console.error('音频数据准备失败:', error);
-      console.error('音频数据准备错误详情:', { videoFile: state.videoFile?.name, error });
+      console.error('音频数据准备错误详情:', { videoFile: videoFile?.name, error });
       return null;
     }
-  }, [state.videoFile]);
+  }, [videoFile]);
 
   // 开始ASR处理
   const handleStartASR = useCallback(async () => {
@@ -135,8 +237,8 @@ export function ASRPanel({ className }: ASRPanelProps) {
   };
 
   const statusDisplay = getStatusDisplay();
-  const canStart = state.videoFile && !isLoading && !asrProgress?.status;
-  const canRetry = error || (asrProgress?.status === 'complete' && state.transcript);
+  const canStart = videoFile && !isLoading && !asrProgress?.status;
+  const canRetry = error || (asrProgress?.status === 'complete' && hasTranscriptChunks);
 
   return (
     <div className={cn('bg-card border rounded-lg p-6 space-y-4', className)}>
@@ -268,12 +370,12 @@ export function ASRPanel({ className }: ASRPanelProps) {
       </div>
 
       {/* 文件信息 */}
-      {state.videoFile && (
+      {videoFile && (
         <div className="text-xs text-muted-foreground border-t pt-4">
-          <p>文件: {state.videoFile.name}</p>
-          <p>类型: {state.videoFile.type}</p>
-          {state.videoFile.duration > 0 && (
-            <p>时长: {Math.floor(state.videoFile.duration / 60)}:{Math.floor(state.videoFile.duration % 60).toString().padStart(2, '0')}</p>
+          <p>文件: {videoFile.name}</p>
+          <p>类型: {videoFile.type}</p>
+          {videoFile.duration > 0 && (
+            <p>时长: {Math.floor(videoFile.duration / 60)}:{Math.floor(videoFile.duration % 60).toString().padStart(2, '0')}</p>
           )}
         </div>
       )}

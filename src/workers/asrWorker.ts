@@ -24,9 +24,9 @@ const PER_DEVICE_CONFIG = {
  */
 class PipelineSingleton {
   static model_id = 'onnx-community/whisper-base_timestamped';
-  static instance: any = null;
+  static instance: Awaited<ReturnType<typeof pipeline>> | null = null;
 
-  static async getInstance(progress_callback?: (progress: any) => void, device: 'webgpu' | 'wasm' = 'webgpu') {
+  static async getInstance(progress_callback?: (progress: unknown) => void, device: 'webgpu' | 'wasm' = 'webgpu') {
     if (!this.instance) {
       console.log('ASR创建新的管道实例:', device);
       this.instance = pipeline('automatic-speech-recognition', this.model_id, {
@@ -112,14 +112,14 @@ async function run({ audio, language }: { audio: Float32Array; language: string 
     // 处理结果，生成带 ID 的字幕片段
     const transcript: SubtitleTranscript = {
       text: result.text,
-      chunks: result.chunks.map((chunk: any, index: number) => ({
+      chunks: result.chunks.map((chunk: { text: string; timestamp: [number, number] }, index: number) => ({
         text: chunk.text,
         timestamp: chunk.timestamp,
         id: `chunk-${index}`,
         selected: false,
       })),
       language,
-      duration: Math.max(...result.chunks.map((c: any) => c.timestamp[1])),
+      duration: Math.max(...result.chunks.map((c: { timestamp: [number, number] }) => c.timestamp[1])),
     };
 
     console.log('ASR识别完成:', { 

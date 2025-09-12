@@ -1,7 +1,7 @@
 // 文件上传组件
 
 import React, { useCallback, useState, useRef } from 'react';
-import { useAppDispatch } from '@/contexts/AppContext';
+import { useAppStore } from '@/stores/appStore';
 import { 
   isVideoFile, 
   formatFileSize, 
@@ -20,7 +20,9 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ className, onFileSelect }: FileUploadProps) {
-  const dispatch = useAppDispatch();
+  const setVideoFile = useAppStore((state) => state.setVideoFile);
+  const setAppError = useAppStore((state) => state.setError);
+  const reset = useAppStore((state) => state.reset);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isDragging, setIsDragging] = useState(false);
@@ -84,10 +86,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
       setUploadedFile(videoFile);
       
       // 更新应用状态
-      dispatch({
-        type: 'SET_VIDEO_FILE',
-        videoFile,
-      });
+      setVideoFile(videoFile);
 
       // 通知父组件
       if (onFileSelect) {
@@ -98,14 +97,11 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
       console.error('文件处理失败:', err);
       const errorMessage = err instanceof Error ? err.message : '文件处理失败';
       setError(errorMessage);
-      dispatch({
-        type: 'SET_ERROR',
-        error: errorMessage,
-      });
+      setAppError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
-  }, [dispatch, onFileSelect]);
+  }, [setVideoFile, setAppError, onFileSelect]);
 
   const handleFileSelect = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -152,13 +148,13 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
   const clearFile = useCallback(() => {
     setUploadedFile(null);
     setError(null);
-    dispatch({ type: 'RESET' });
+    reset();
     
     // 清空文件输入
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [dispatch]);
+  }, [reset]);
 
   return (
     <div className={cn('w-full', className)}>

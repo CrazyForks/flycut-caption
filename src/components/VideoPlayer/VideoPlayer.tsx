@@ -1,7 +1,7 @@
 // 视频播放器组件
 
 import React, { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
+import { useAppStore } from '@/stores/appStore';
 import { Play, Pause, Volume2, VolumeX, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
@@ -23,7 +23,12 @@ export interface VideoPlayerRef {
 
 const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
   ({ className, onTimeUpdate, onLoadedMetadata }, ref) => {
-    const { state, dispatch } = useAppContext();
+    const videoFile = useAppStore((state) => state.videoFile);
+    const videoPlayerState = useAppStore((state) => state.videoPlayerState);
+    const currentTime = useAppStore((state) => state.currentTime);
+    const setVideoPlayerState = useAppStore((state) => state.setVideoPlayerState);
+    const setCurrentTime = useAppStore((state) => state.setCurrentTime);
+    const setError = useAppStore((state) => state.setError);
     const videoRef = useRef<HTMLVideoElement>(null);
     const progressRef = useRef<HTMLDivElement>(null);
 
@@ -54,36 +59,33 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
     // 更新播放状态
     const updatePlayerState = useCallback((updates: Partial<VideoPlayerState>) => {
-      dispatch({
-        type: 'SET_VIDEO_PLAYER_STATE',
-        playerState: updates,
-      });
-    }, [dispatch]);
+      setVideoPlayerState(updates);
+    }, [setVideoPlayerState]);
 
     // 播放/暂停切换
     const togglePlay = useCallback(async () => {
       if (!videoRef.current) return;
 
       try {
-        if (state.videoPlayerState.isPlaying) {
+        if (videoPlayerState.isPlaying) {
           videoRef.current.pause();
         } else {
           await videoRef.current.play();
         }
       } catch (error) {
         console.error('播放控制失败:', error);
-        console.error('播放控制错误详情:', { isPlaying: state.videoPlayerState.isPlaying, videoSrc: state.videoFile?.url });
+        console.error('播放控制错误详情:', { isPlaying: videoPlayerState.isPlaying, videoSrc: videoFile?.url });
       }
-    }, [state.videoPlayerState.isPlaying]);
+    }, [videoPlayerState.isPlaying, videoFile]);
 
     // 音量切换
     const toggleMute = useCallback(() => {
       if (!videoRef.current) return;
       
-      const newMuted = !state.videoPlayerState.muted;
+      const newMuted = !videoPlayerState.muted;
       videoRef.current.muted = newMuted;
       updatePlayerState({ muted: newMuted });
-    }, [state.videoPlayerState.muted, updatePlayerState]);
+    }, [videoPlayerState.muted, updatePlayerState]);
 
     // 重置播放
     const resetVideo = useCallback(() => {
@@ -100,11 +102,11 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       const rect = progressRef.current.getBoundingClientRect();
       const clickX = event.clientX - rect.left;
       const percentage = clickX / rect.width;
-      const newTime = percentage * state.videoPlayerState.duration;
+      const newTime = percentage * videoPlayerState.duration;
 
       videoRef.current.currentTime = newTime;
       updatePlayerState({ currentTime: newTime });
-    }, [state.videoPlayerState.duration, updatePlayerState]);
+    }, [videoPlayerState.duration, updatePlayerState]);
 
     // 音量滑块变化
     const handleVolumeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,15 +132,12 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       };
 
       const handleTimeUpdate = () => {
-        const currentTime = video.currentTime;
-        updatePlayerState({ currentTime });
-        onTimeUpdate?.(currentTime);
+        const videoCurrentTime = video.currentTime;
+        updatePlayerState({ currentTime: videoCurrentTime });
+        onTimeUpdate?.(videoCurrentTime);
         
         // 同步全局时间状态
-        dispatch({
-          type: 'SET_CURRENT_TIME',
-          time: currentTime,
-        });
+        setCurrentTime(videoCurrentTime);
       };
 
       const handlePlay = () => {
@@ -158,10 +157,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
       const handleError = (error: Event) => {
         console.error('视频播放错误:', error);
-        dispatch({
-          type: 'SET_ERROR',
-          error: '视频播放失败',
-        });
+        setError('视频播放失败');
       };
 
       // 添加事件监听
@@ -181,16 +177,16 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         video.removeEventListener('volumechange', handleVolumeChange);
         video.removeEventListener('error', handleError);
       };
-    }, [updatePlayerState, onTimeUpdate, onLoadedMetadata, dispatch]);
+    }, [updatePlayerState, onTimeUpdate, onLoadedMetadata, setError, setCurrentTime]);
 
     // 外部时间同步
     useEffect(() => {
-      if (videoRef.current && Math.abs(videoRef.current.currentTime - state.currentTime) > 0.1) {
-        videoRef.current.currentTime = state.currentTime;
+      if (videoRef.current && Math.abs(videoRef.current.currentTime - currentTime) > 0.1) {
+        videoRef.current.currentTime = currentTime;
       }
-    }, [state.currentTime]);
+    }, [currentTime]);
 
-    if (!state.videoFile) {
+    if (!videoFile) {
       return (
         <div className={cn(
           'bg-muted rounded-lg flex items-center justify-center h-64',
@@ -206,7 +202,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         {/* 视频元素 */}
         <video
           ref={videoRef}
-          src={state.videoFile.url}
+          src={videoFile.url}
           className="w-full h-auto"
           preload="metadata"
         />
@@ -223,14 +219,14 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
               <div
                 className="h-full bg-primary rounded transition-all duration-100"
                 style={{
-                  width: `${(state.videoPlayerState.currentTime / state.videoPlayerState.duration) * 100 || 0}%`,
+                  width: `${(videoPlayerState.currentTime / videoPlayerState.duration) * 100 || 0}%`,
                 }}
               />
             </div>
             
             <div className="flex justify-between text-xs text-white">
-              <span>{formatTime(state.videoPlayerState.currentTime)}</span>
-              <span>{formatTime(state.videoPlayerState.duration)}</span>
+              <span>{formatTime(videoPlayerState.currentTime)}</span>
+              <span>{formatTime(videoPlayerState.duration)}</span>
             </div>
           </div>
 
@@ -242,7 +238,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 onClick={togglePlay}
                 className="p-2 hover:bg-white/20 rounded-full transition-colors"
               >
-                {state.videoPlayerState.isPlaying ? (
+                {videoPlayerState.isPlaying ? (
                   <Pause className="h-5 w-5 text-white" />
                 ) : (
                   <Play className="h-5 w-5 text-white" />
@@ -260,7 +256,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
               {/* 时间显示 */}
               <div className="text-sm text-white">
-                {formatTime(state.videoPlayerState.currentTime)} / {formatTime(state.videoPlayerState.duration)}
+                {formatTime(videoPlayerState.currentTime)} / {formatTime(videoPlayerState.duration)}
               </div>
             </div>
 
@@ -270,7 +266,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 onClick={toggleMute}
                 className="p-2 hover:bg-white/20 rounded-full transition-colors"
               >
-                {state.videoPlayerState.muted || state.videoPlayerState.volume === 0 ? (
+                {videoPlayerState.muted || videoPlayerState.volume === 0 ? (
                   <VolumeX className="h-4 w-4 text-white" />
                 ) : (
                   <Volume2 className="h-4 w-4 text-white" />
@@ -282,7 +278,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 min="0"
                 max="1"
                 step="0.1"
-                value={state.videoPlayerState.muted ? 0 : state.videoPlayerState.volume}
+                value={videoPlayerState.muted ? 0 : videoPlayerState.volume}
                 onChange={handleVolumeChange}
                 className="w-20"
               />

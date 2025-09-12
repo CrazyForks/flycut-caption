@@ -2,7 +2,8 @@ import { Combinator, MP4Clip, OffscreenSprite } from '@webav/av-cliper';
 import type { VideoSegment, VideoFile, VideoProcessingProgress } from '@/types/video';
 
 export interface ProcessingOptions {
-  outputFormat: 'mp4' | 'webm';
+  format?: 'mp4' | 'webm';
+  outputFormat?: 'mp4' | 'webm';
   quality: 'high' | 'medium' | 'low';
   preserveAudio: boolean;
 }
@@ -60,7 +61,11 @@ export class VideoProcessor {
       this.reportProgress('cutting', 0, '创建视频合成器...');
 
       // 创建合成器 - 修正audio选项类型
-      const combinatorOptions: any = {
+      const combinatorOptions: {
+        width: number;
+        height: number;
+        audio?: false;
+      } = {
         width: this.videoClip.meta.width,
         height: this.videoClip.meta.height,
       };

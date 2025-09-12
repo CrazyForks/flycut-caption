@@ -40,6 +40,7 @@ export type AppAction =
   | { type: 'TOGGLE_CHUNK_SELECTION'; chunkId: string }
   | { type: 'SELECT_ALL_CHUNKS' }
   | { type: 'DESELECT_ALL_CHUNKS' }
+  | { type: 'SET_SELECTED_CHUNKS'; selectedChunks: Set<string> }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
   | { type: 'SET_LANGUAGE'; language: string }

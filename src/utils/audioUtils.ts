@@ -6,8 +6,8 @@
  * 与官方 transformers.js-examples/whisper-word-timestamps 完全一致
  */
 export async function processAudioForASR(buffer: ArrayBuffer): Promise<Float32Array> {
-  const audioContext = new (window.AudioContext ||
-    (window as any).webkitAudioContext)({ sampleRate: 16_000 });
+  const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const audioContext = new AudioContextClass({ sampleRate: 16_000 });
 
   try {
     const audioBuffer = await audioContext.decodeAudioData(buffer);
@@ -38,12 +38,12 @@ export async function processAudioForASR(buffer: ArrayBuffer): Promise<Float32Ar
  * 检测浏览器是否支持 WebGPU
  */
 export async function hasWebGPU(): Promise<boolean> {
-  if (!(navigator as any).gpu) {
+  if (!('gpu' in navigator)) {
     return false;
   }
   
   try {
-    const adapter = await (navigator as any).gpu.requestAdapter();
+    const adapter = await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown> } }).gpu.requestAdapter();
     return !!adapter;
   } catch (e) {
     console.error('WebGPU检测失败:', e);

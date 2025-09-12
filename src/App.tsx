@@ -1,88 +1,274 @@
 // FlyCut Caption - 智能视频字幕裁剪工具
 
-import { useRef, useCallback, useMemo } from 'react';
-import { AppProvider, useAppState, useAppDispatch } from '@/contexts/AppContext';
+import { useCallback, useMemo, useState, useRef } from 'react';
+import { useAppStore } from '@/stores/appStore';
+import { useChunks } from '@/stores/historyStore';
 import { FileUpload } from '@/components/FileUpload/FileUpload';
-import VideoPlayer, { type VideoPlayerRef } from '@/components/VideoPlayer/VideoPlayer';
+import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import { SubtitleList } from '@/components/SubtitleEditor/SubtitleList';
 import { ASRPanel } from '@/components/ProcessingPanel/ASRPanel';
 import { VideoProcessingPanel } from '@/components/ProcessingPanel/VideoProcessingPanel';
-import { useVideoProcessor } from '@/hooks/useVideoProcessor';
+import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
+import { ExportPanel } from '@/components/ExportPanel/ExportPanel';
+import { EngineSelector } from '@/components/EngineSelector/EngineSelector';
+import { SegmentDebugPanel } from '@/components/DebugPanel/SegmentDebugPanel';
+import { UnifiedVideoProcessor } from '@/services/UnifiedVideoProcessor';
 import { Scissors, Film, FileText, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { VideoFile, VideoSegment } from '@/types/video';
-import type { ProcessingOptions } from '@/services/videoProcessor';
+import type { VideoFile, VideoSegment, VideoProcessingProgress } from '@/types/video';
+import type { VideoProcessingOptions, VideoEngineType } from '@/types/videoEngine';
 
 function AppContent() {
-  const state = useAppState();
-  const dispatch = useAppDispatch();
-  const videoPlayerRef = useRef<VideoPlayerRef>(null);
+  const stage = useAppStore(state => state.stage);
+  const videoFile = useAppStore(state => state.videoFile);
+  const error = useAppStore(state => state.error);
+  const isLoading = useAppStore(state => state.isLoading);
+  const chunks = useChunks();
   
-  // 视频处理相关状态和方法
-  const {
-    isProcessing,
-    progress,
-    processedVideoBlob,
-    processVideo,
-    downloadProcessedVideo,
-    resetProcessor
-  } = useVideoProcessor();
+  // 在组件层用 useMemo 做过滤，保证只有 chunks 引用变更时才重新计算
+  const activeChunks = useMemo(
+    () => chunks.filter(c => !c.deleted),
+    [chunks]
+  );
+  const setCurrentTime = useAppStore(state => state.setCurrentTime);
+  const setStage = useAppStore(state => state.setStage);
+  const setError = useAppStore(state => state.setError);
+  const reset = useAppStore(state => state.reset);
+  
+  // 视频处理相关状态
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState<VideoProcessingProgress | null>(null);
+  const [processedVideoBlob, setProcessedVideoBlob] = useState<Blob | null>(null);
+  const [currentEngine, setCurrentEngine] = useState<VideoEngineType | null>(null);
+  const processorRef = useRef<UnifiedVideoProcessor | null>(null);
+  
+  // const availableEngines = UnifiedVideoProcessor.getSupportedEngines();
+
+  const handleProgress = useCallback((progressData: VideoProcessingProgress) => {
+    setProgress(progressData);
+  }, []);
+
+  const processVideo = useCallback(async (
+    videoFile: VideoFile,
+    segments: VideoSegment[],
+    options?: VideoProcessingOptions
+  ) => {
+    if (isProcessing) {
+      console.warn('视频处理正在进行中');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setProgress(null);
+      setProcessedVideoBlob(null);
+
+      // 创建处理器（如果不存在）
+      if (!processorRef.current) {
+        processorRef.current = new UnifiedVideoProcessor(handleProgress);
+      }
+
+      // 初始化处理器（如果还没有初始化或需要切换引擎）
+      const engineType = await processorRef.current.initialize(
+        videoFile, 
+        options?.engine || currentEngine || undefined
+      );
+      setCurrentEngine(engineType);
+
+      // 处理视频
+      const resultBlob = await processorRef.current.processVideo(segments, options || {
+        quality: 'medium',
+        preserveAudio: true
+      });
+
+      setProcessedVideoBlob(resultBlob);
+
+    } catch (error) {
+      console.error('视频处理失败:', error);
+      console.error('视频处理错误详情:', { 
+        videoFile: videoFile?.name, 
+        segments: segments?.length, 
+        options,
+        stack: error instanceof Error ? error.stack : undefined 
+      });
+      setProgress({
+        stage: 'error',
+        progress: 0,
+        message: '处理失败',
+        error: error instanceof Error ? error.message : '未知错误'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, handleProgress, currentEngine]);
+
+  const switchEngine = useCallback(async (engine: VideoEngineType, videoFile: VideoFile) => {
+    if (isProcessing) {
+      throw new Error('无法在处理视频时切换引擎');
+    }
+
+    try {
+      // 创建处理器（如果不存在）
+      if (!processorRef.current) {
+        processorRef.current = new UnifiedVideoProcessor(handleProgress);
+      }
+
+      await processorRef.current.switchEngine(engine, videoFile);
+      setCurrentEngine(engine);
+      
+      console.log(`成功切换到引擎: ${engine}`);
+    } catch (error) {
+      console.error('切换引擎失败:', error);
+      throw error;
+    }
+  }, [isProcessing, handleProgress]);
+
+  const downloadProcessedVideo = useCallback((filename?: string) => {
+    if (!processedVideoBlob) {
+      console.warn('没有处理完成的视频可以下载');
+      return;
+    }
+
+    const url = URL.createObjectURL(processedVideoBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `processed_video_${Date.now()}.mp4`;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // 清理URL对象
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }, [processedVideoBlob]);
+
+  const resetProcessor = useCallback(async () => {
+    setIsProcessing(false);
+    setProgress(null);
+    setProcessedVideoBlob(null);
+
+    if (processorRef.current) {
+      await processorRef.current.cleanup();
+      processorRef.current = null;
+    }
+    setCurrentEngine(null);
+  }, []);
 
   const handleFileSelect = (videoFile: VideoFile) => {
     console.log('文件选择完成:', videoFile);
   };
 
-  // 从字幕生成视频片段
+  // 从字幕生成视频片段 - 合并连续的保留区域
   const videoSegments = useMemo((): VideoSegment[] => {
-    if (!state.transcript || !state.transcript.chunks || state.transcript.chunks.length === 0) {
+    if (!activeChunks || activeChunks.length === 0) {
       return [];
     }
 
-    return state.transcript.chunks.map(chunk => ({
-      start: chunk.timestamp[0],
-      end: chunk.timestamp[1],
-      keep: !state.selectedChunks.has(chunk.id), // 未选中删除的保留
-    }));
-  }, [state.transcript, state.selectedChunks]);
+    // 按时间排序字幕块
+    const sortedChunks = [...activeChunks].sort((a, b) => a.timestamp[0] - b.timestamp[0]);
+    
+    const segments: VideoSegment[] = [];
+    let currentSegment: VideoSegment | null = null;
+
+    for (const chunk of sortedChunks) {
+      const isKept = !chunk.deleted; // historyStore 使用 deleted 属性
+      const chunkStart = chunk.timestamp[0];
+      const chunkEnd = chunk.timestamp[1];
+
+      if (isKept) {
+        // 这个块要保留
+        if (currentSegment && Math.abs(currentSegment.end - chunkStart) < 0.1) {
+          // 与当前片段连续，扩展当前片段
+          currentSegment.end = chunkEnd;
+        } else {
+          // 开始新片段
+          if (currentSegment) {
+            segments.push(currentSegment);
+          }
+          currentSegment = {
+            start: chunkStart,
+            end: chunkEnd,
+            keep: true
+          };
+        }
+      } else {
+        // 这个块要删除，结束当前片段（如果存在）
+        if (currentSegment) {
+          segments.push(currentSegment);
+          currentSegment = null;
+        }
+      }
+    }
+
+    // 添加最后一个片段
+    if (currentSegment) {
+      segments.push(currentSegment);
+    }
+
+    // 调试输出
+    if (segments.length > 0) {
+      console.group('🎬 视频片段生成完成');
+      console.log('保留的片段数量:', segments.length);
+      segments.forEach((seg, i) => {
+        console.log(`片段 ${i + 1}: ${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s (${(seg.end - seg.start).toFixed(2)}s)`);
+      });
+      console.groupEnd();
+    }
+    
+    return segments;
+  }, [activeChunks]);
 
   // 开始视频处理
-  const handleStartProcessing = useCallback(async (options: ProcessingOptions) => {
-    if (!state.videoFile) {
+  const handleStartProcessing = useCallback(async (options: VideoProcessingOptions) => {
+    if (!videoFile) {
       console.error('没有视频文件可以处理');
       return;
     }
 
     // 切换到处理阶段
-    dispatch({ type: 'SET_STAGE', stage: 'process' });
+    setStage('process');
 
     try {
-      await processVideo(state.videoFile, videoSegments, options);
+      await processVideo(videoFile, videoSegments, options);
       // 处理完成后切换到导出阶段
-      dispatch({ type: 'SET_STAGE', stage: 'export' });
+      setStage('export');
     } catch (error) {
       console.error('视频处理失败:', error);
       console.error('App视频处理错误详情:', { 
-        videoFile: state.videoFile?.name, 
+        videoFile: videoFile?.name, 
         segments: videoSegments?.length,
         error 
       });
-      dispatch({
-        type: 'SET_ERROR',
-        error: `视频处理失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      });
+      setError(`视频处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
-  }, [state.videoFile, videoSegments, processVideo, dispatch]);
+  }, [videoFile, videoSegments, processVideo, setStage, setError]);
 
   // 重置处理器并返回编辑阶段
   const handleResetProcessing = useCallback(() => {
     resetProcessor();
-    dispatch({ type: 'SET_STAGE', stage: 'edit' });
-    dispatch({ type: 'SET_ERROR', error: null });
-  }, [resetProcessor, dispatch]);
+    setStage('edit');
+    setError(null);
+  }, [resetProcessor, setStage, setError]);
+
+  // 引擎切换处理
+  const handleEngineSwitch = useCallback(async (engine: VideoEngineType) => {
+    if (!videoFile) {
+      console.warn('没有视频文件，无法切换引擎');
+      return;
+    }
+
+    try {
+      await switchEngine(engine, videoFile);
+      console.log(`成功切换到引擎: ${engine}`);
+    } catch (error) {
+      console.error('引擎切换失败:', error);
+      setError(`引擎切换失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }, [videoFile, switchEngine, setError]);
 
   // 根据应用阶段显示不同的界面
   const renderMainContent = () => {
-    switch (state.stage) {
+    switch (stage) {
       case 'upload':
         return (
           <div className="max-w-2xl mx-auto">
@@ -115,19 +301,20 @@ function AppContent() {
             <div className="space-y-6">
               <ASRPanel />
               
-              {state.videoFile && (
+              {videoFile && (
                 <div className="text-center text-sm text-muted-foreground p-4 border rounded-lg">
-                  <p>已加载: {state.videoFile.name}</p>
+                  <p>已加载: {videoFile.name}</p>
                   <p>生成字幕后即可开始编辑</p>
                 </div>
               )}
             </div>
             
             <div>
-              {state.videoFile && (
-                <VideoPlayer 
-                  ref={videoPlayerRef}
+              {videoFile && (
+                <EnhancedVideoPlayer 
+                  videoUrl={videoFile.url}
                   className="w-full"
+                  onTimeUpdate={(time) => setCurrentTime(time)}
                 />
               )}
             </div>
@@ -136,18 +323,19 @@ function AppContent() {
 
       case 'edit':
         return (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* 左侧: 视频播放器 */}
             <div className="xl:col-span-1">
-              {state.videoFile && (
-                <VideoPlayer 
-                  ref={videoPlayerRef}
+              {videoFile && (
+                <EnhancedVideoPlayer 
+                  videoUrl={videoFile.url}
                   className="w-full sticky top-6"
+                  onTimeUpdate={(time) => setCurrentTime(time)}
                 />
               )}
             </div>
             
-            {/* 右侧: 字幕编辑器和处理面板 */}
+            {/* 中间: 字幕编辑器 */}
             <div className="xl:col-span-2 space-y-6">
               <div>
                 <div className="mb-4">
@@ -164,13 +352,47 @@ function AppContent() {
               </div>
 
               {/* 视频处理面板 */}
-              {state.transcript && state.transcript.chunks && state.transcript.chunks.length > 0 && (
+              {activeChunks.length > 0 && (
                 <VideoProcessingPanel
                   isProcessing={isProcessing}
                   progress={progress}
                   processedVideoBlob={processedVideoBlob}
                   onStartProcessing={handleStartProcessing}
                   onDownload={downloadProcessedVideo}
+                />
+              )}
+            </div>
+
+            {/* 右侧: 引擎选择器、历史记录和导出面板 */}
+            <div className="xl:col-span-1 space-y-6">
+              <EngineSelector
+                currentEngine={currentEngine || undefined}
+                onEngineChange={handleEngineSwitch}
+                disabled={isProcessing}
+                className="sticky top-6"
+              />
+              
+              <HistoryPanel />
+              
+              {/* 调试面板 - 临时添加用于测试 */}
+              {videoSegments.length > 0 && (
+                <SegmentDebugPanel segments={videoSegments} />
+              )}
+              
+              {activeChunks.length > 0 && (
+                <ExportPanel
+                  onExportSubtitles={(format) => {
+                    console.log('导出字幕:', format);
+                    // TODO: 实现字幕导出功能
+                  }}
+                  onExportVideo={(options) => {
+                    console.log('导出视频:', options);
+                    handleStartProcessing({
+                      format: options.format === 'mp4' ? 'mp4' : 'webm',
+                      quality: options.quality,
+                      preserveAudio: !options.includeSubtitles, // 简化处理
+                    });
+                  }}
                 />
               )}
             </div>
@@ -250,7 +472,7 @@ function AppContent() {
               <button
                 onClick={() => {
                   // 重置整个应用，返回上传阶段
-                  dispatch({ type: 'RESET' });
+                  reset();
                   resetProcessor();
                 }}
                 className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
@@ -286,7 +508,7 @@ function AppContent() {
             <div className="hidden md:flex items-center space-x-4 text-sm">
               <div className={cn(
                 'flex items-center space-x-2 px-3 py-1 rounded-full',
-                state.stage === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                stage === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               )}>
                 <Upload className="h-4 w-4" />
                 <span>上传</span>
@@ -294,7 +516,7 @@ function AppContent() {
               
               <div className={cn(
                 'flex items-center space-x-2 px-3 py-1 rounded-full',
-                state.stage === 'transcribe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                stage === 'transcribe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               )}>
                 <FileText className="h-4 w-4" />
                 <span>转录</span>
@@ -302,7 +524,7 @@ function AppContent() {
               
               <div className={cn(
                 'flex items-center space-x-2 px-3 py-1 rounded-full',
-                state.stage === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                stage === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               )}>
                 <Scissors className="h-4 w-4" />
                 <span>编辑</span>
@@ -310,7 +532,7 @@ function AppContent() {
               
               <div className={cn(
                 'flex items-center space-x-2 px-3 py-1 rounded-full',
-                (state.stage === 'process' || state.stage === 'export') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                (stage === 'process' || stage === 'export') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               )}>
                 <Film className="h-4 w-4" />
                 <span>导出</span>
@@ -323,14 +545,14 @@ function AppContent() {
       {/* 主要内容区域 */}
       <main className="container mx-auto px-6 py-8">
         {/* 错误提示 */}
-        {state.error && (
+        {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-600 dark:text-red-400 text-sm">{state.error}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
           </div>
         )}
 
         {/* 加载指示器 */}
-        {state.isLoading && (
+        {isLoading && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
@@ -357,11 +579,7 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
-  );
+  return <AppContent />;
 }
 
 export default App;

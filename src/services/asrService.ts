@@ -9,7 +9,7 @@ export class ASRService {
   private onProgress: ((progress: ASRProgress) => void) | null = null;
   private isModelLoaded = false;
   private currentDevice: 'webgpu' | 'wasm' = 'wasm';
-  private currentLanguage: string = 'en';
+  // private currentLanguage: string = 'en'; // TODO: Implement language switching
 
   constructor() {
     console.log('ASR Service初始化');
@@ -180,7 +180,7 @@ export class ASRService {
     }
     
     // 保存当前语言用于结果格式化
-    this.currentLanguage = language;
+    // this.currentLanguage = language; // TODO: Implement language switching
 
     // 处理音频数据
     const audioData = await processAudioForASR(audioBuffer);
