@@ -1,12 +1,25 @@
 // WebAV 视频处理引擎实现
 
-import { Combinator, MP4Clip, OffscreenSprite } from '@webav/av-cliper';
+import { Combinator, MP4Clip, OffscreenSprite, EmbedSubtitlesClip } from '@webav/av-cliper';
+import { 
+  createSubtitleClip, 
+  formatSubtitleText, 
+  calculateSubtitlePosition, 
+  secondsToMicroseconds,
+  type SubtitleChunk
+} from '@/utils/subtitleUtils';
 import type { 
   IVideoProcessingEngine, 
   VideoEngineType, 
   EngineCapabilities, 
   VideoProcessingOptions 
 } from '@/types/videoEngine';
+
+interface SubtitleStruct {
+  start: number; // 开始时间（微秒）
+  end: number;   // 结束时间（微秒）
+  text: string;  // 字幕文本
+}
 import type { VideoFile, VideoSegment, VideoProcessingProgress } from '@/types/video';
 
 export class WebAVEngine implements IVideoProcessingEngine {
@@ -63,7 +76,7 @@ export class WebAVEngine implements IVideoProcessingEngine {
           trimming: true,
           concatenation: true,
           audioProcessing: true,
-          subtitleBurning: false, // WebAV 当前不支持字幕烧录
+          subtitleBurning: true, // 现在支持字幕烧录
           qualityControl: true,
         }
       };
@@ -124,10 +137,10 @@ export class WebAVEngine implements IVideoProcessingEngine {
 
       this.reportProgress('processing', 10, '分析删除片段...');
 
-      // 获取所有删除的片段，用于计算split点
-      const deletedSegments = segments
-        .filter(seg => !seg.keep)
-        .sort((a, b) => a.start - b.start);
+      // 获取所有删除的片段并合并连续片段
+      const deletedSegments = this.mergeConsecutiveSegments(
+        segments.filter(seg => !seg.keep)
+      );
 
       console.log('删除片段:', deletedSegments.map(s => `${s.start}s-${s.end}s`));
       console.log('保留片段:', keptSegments.map(s => `${s.start}s-${s.end}s`));
@@ -176,9 +189,35 @@ export class WebAVEngine implements IVideoProcessingEngine {
 
         this.reportProgress(
           'processing', 
-          60 + (i / splitClips.length) * 20, 
+          60 + (i / splitClips.length) * 15, 
           `重组片段 ${i + 1}/${splitClips.length}`
         );
+      }
+
+      // 从 segments 中提取字幕信息
+      const subtitleChunks = segments
+        .filter(seg => seg.text && seg.id) // 只处理有字幕文本和ID的片段
+        .map(seg => ({
+          id: seg.id!,
+          text: seg.text!,
+          timestamp: [seg.start, seg.end] as [number, number],
+          deleted: !seg.keep,
+        }));
+
+      // 根据字幕处理类型添加字幕
+      console.log('options.subtitleProcessing:', options.subtitleProcessing, subtitleChunks);
+      if (options.subtitleProcessing && options.subtitleProcessing !== 'none' && subtitleChunks.length > 0) {
+        this.reportProgress('processing', 75, '添加字幕到视频...');
+        
+        await this.addSoftSubtitles(subtitleChunks, keptSegments);
+        // if (options.subtitleProcessing === 'soft') {
+        //   // 软烧录：使用 EmbedSubtitlesClip
+        // } else {
+        //   // 硬烧录：保持原有逻辑
+        //   await this.addSubtitlesToCombinator(keptSegments, subtitleChunks, options.subtitleProcessing);
+        // }
+        
+        this.reportProgress('processing', 78, '字幕添加完成');
       }
 
       this.reportProgress('processing', 80, '开始输出视频...');
@@ -252,6 +291,7 @@ export class WebAVEngine implements IVideoProcessingEngine {
     // WebAV 引擎特定的配置选项
     console.log('WebAV 引擎配置:', config);
   }
+
 
   private reportProgress(stage: string, progress: number, message: string) {
     if (this.onProgress) {
@@ -349,4 +389,256 @@ export class WebAVEngine implements IVideoProcessingEngine {
     
     return merged;
   }
+
+  private mergeConsecutiveSegments(segments: VideoSegment[]): VideoSegment[] {
+    if (segments.length === 0) return [];
+    
+    const sorted = [...segments].sort((a, b) => a.start - b.start);
+    const merged: VideoSegment[] = [sorted[0]];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i];
+      const last = merged[merged.length - 1];
+      
+      // 如果当前片段与最后一个片段连续（next.start === prev.end）或重叠，则合并
+      if (current.start <= last.end) {
+        last.end = Math.max(last.end, current.end);
+      } else {
+        merged.push(current);
+      }
+    }
+    
+    return merged;
+  }
+
+
+  /**
+   * 将字幕添加到合成器中
+   */
+  private async addSubtitlesToCombinator(
+    keptSegments: VideoSegment[], 
+    subtitleChunks: SubtitleChunk[], 
+    subtitleType: 'soft' | 'hard'
+  ): Promise<void> {
+    if (!this.combinator || !this.videoClip || subtitleChunks.length === 0) {
+      return;
+    }
+    
+    // WebAV引擎支持软烧录和硬烧录
+    console.log(`WebAV引擎使用${subtitleType === 'soft' ? '软' : '硬'}烧录字幕`);
+
+    // 计算最终视频中字幕的时间映射
+    const subtitleTimeMapping = this.calculateSubtitleTimeMapping(keptSegments, subtitleChunks);
+    
+    let subtitleIndex = 0;
+    for (const subtitleChunk of subtitleChunks) {
+      const mappedTime = subtitleTimeMapping.get(subtitleChunk);
+      if (!mappedTime) {
+        continue; // 这个字幕片段被删除了，跳过
+      }
+
+      try {
+        // 格式化字幕文本
+        const formattedText = formatSubtitleText(subtitleChunk.text, 40);
+        
+        // 创建字幕图像
+        const subtitleClip = await createSubtitleClip(formattedText, {
+          fontSize: 28,
+          color: 'white',
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          padding: 12,
+          borderRadius: 6,
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.9)',
+        });
+
+        // 创建字幕精灵
+        const subtitleSprite = new OffscreenSprite(subtitleClip);
+        
+        // 设置字幕时间
+        subtitleSprite.time = {
+          offset: mappedTime.startTime,
+          duration: mappedTime.duration,
+        };
+
+        // 计算字幕位置（底部居中）
+        const position = calculateSubtitlePosition(
+          this.videoClip.meta.width,
+          this.videoClip.meta.height,
+          subtitleClip.meta.width || 400, // 默认宽度
+          subtitleClip.meta.height || 60  // 默认高度
+        );
+
+        // 设置字幕位置
+        subtitleSprite.rect.x = position.x;
+        subtitleSprite.rect.y = position.y;
+        subtitleSprite.rect.w = subtitleClip.meta.width || 400;
+        subtitleSprite.rect.h = subtitleClip.meta.height || 60;
+
+        // 设置 z-index 确保字幕在视频上方
+        subtitleSprite.zIndex = 10;
+
+        // 添加到合成器
+        await this.combinator.addSprite(subtitleSprite);
+        
+        console.log(`添加字幕 ${subtitleIndex + 1}: "${subtitleChunk.text}" (${mappedTime.startTime / 1e6}s - ${(mappedTime.startTime + mappedTime.duration) / 1e6}s)`);
+        
+        subtitleIndex++;
+      } catch (error) {
+        console.warn(`添加字幕失败:`, subtitleChunk.text, error);
+      }
+    }
+
+    console.log(`总共添加了 ${subtitleIndex} 个字幕`);
+  }
+
+  /**
+   * 计算字幕在最终视频中的时间映射
+   * 关键修复：正确处理被删除片段后的时间重新映射
+   */
+  private calculateSubtitleTimeMapping(
+    keptSegments: VideoSegment[], 
+    subtitleChunks: SubtitleChunk[]
+  ): Map<SubtitleChunk, { startTime: number; duration: number }> {
+    const mapping = new Map<SubtitleChunk, { startTime: number; duration: number }>();
+    
+    // 按时间排序保留的片段
+    const sortedKeptSegments = [...keptSegments].sort((a, b) => a.start - b.start);
+    
+    let currentOffset = 0; // 当前在最终视频中的偏移时间（微秒）
+    
+    for (const segment of sortedKeptSegments) {
+      // 找到这个片段内的字幕（修复：包含跨片段边界的字幕）
+      const segmentSubtitles = subtitleChunks.filter(subtitle => {
+        const [subtitleStart, subtitleEnd] = subtitle.timestamp;
+        // 字幕与片段有重叠即可（不要求完全包含）
+        return subtitleStart < segment.end && subtitleEnd > segment.start;
+      });
+      
+      for (const subtitle of segmentSubtitles) {
+        const [subtitleStart, subtitleEnd] = subtitle.timestamp;
+        
+        // 计算字幕与片段的重叠部分
+        const overlapStart = Math.max(subtitleStart, segment.start);
+        const overlapEnd = Math.min(subtitleEnd, segment.end);
+        
+        if (overlapStart < overlapEnd) {
+          // 计算字幕在最终视频中的开始时间
+          const relativeStart = overlapStart - segment.start; // 相对于片段开始的时间
+          const finalStartTime = currentOffset + secondsToMicroseconds(relativeStart);
+          
+          // 计算重叠部分的持续时间
+          const duration = secondsToMicroseconds(overlapEnd - overlapStart);
+          
+          // 如果已经存在映射，合并时间范围（处理跨片段字幕）
+          const existing = mapping.get(subtitle);
+          if (existing) {
+            // 扩展时间范围以包含新的重叠部分
+            const newStartTime = Math.min(existing.startTime, finalStartTime);
+            const newEndTime = Math.max(existing.startTime + existing.duration, finalStartTime + duration);
+            mapping.set(subtitle, {
+              startTime: newStartTime,
+              duration: newEndTime - newStartTime,
+            });
+          } else {
+            mapping.set(subtitle, {
+              startTime: finalStartTime,
+              duration: duration,
+            });
+          }
+        }
+      }
+      
+      // 更新偏移时间
+      currentOffset += secondsToMicroseconds(segment.end - segment.start);
+    }
+    
+    return mapping;
+  }
+  
+  /**
+   * 添加软烧录字幕（使用 EmbedSubtitlesClip）
+   */
+  private async addSoftSubtitles(subtitleChunks: SubtitleChunk[], keptSegments: VideoSegment[]): Promise<void> {
+    if (!this.combinator || !this.videoClip) {
+      return;
+    }
+    
+    try {
+      // 生成 SubtitleStruct 数组
+      const subtitleStructs = this.generateSubtitleStructs(subtitleChunks, keptSegments);
+      
+      if (subtitleStructs.length === 0) {
+        console.warn('没有字幕内容可以添加');
+        return;
+      }
+      
+      console.log('生成的字幕结构:', subtitleStructs);
+      
+      // 创建字幕嵌入精灵
+      const subtitleSprite = new OffscreenSprite(
+        new EmbedSubtitlesClip(subtitleStructs, {
+          videoWidth: this.videoClip.meta.width,
+          videoHeight: this.videoClip.meta.height,
+          fontSize: 48,
+          fontFamily: 'Arial, sans-serif',
+          strokeStyle: '#000',
+          lineWidth: 3,
+          lineJoin: 'round',
+          lineCap: 'round',
+          textShadow: {
+            offsetX: 2,
+            offsetY: 2,
+            blur: 4,
+            color: 'rgba(0,0,0,0.8)',
+          },
+        })
+      );
+      
+      // 设置字幕时间（覆盖整个视频时长）
+      const totalDuration = keptSegments.reduce((total, seg) => {
+        return total + (seg.end - seg.start);
+      }, 0) * 1e6; // 转换为微秒
+      
+      subtitleSprite.time = {
+        offset: 0,
+        duration: totalDuration,
+      };
+      
+      // 设置 z-index 确保字幕在视频上方
+      subtitleSprite.zIndex = 10;
+      
+      // 添加到合成器
+      await this.combinator.addSprite(subtitleSprite);
+      
+      console.log('软烧录字幕添加成功');
+    } catch (error) {
+      console.error('添加软烧录字幕失败:', error);
+    }
+  }
+  
+  /**
+   * 生成 SubtitleStruct 数组，时间单位为微秒
+   */
+  private generateSubtitleStructs(subtitleChunks: SubtitleChunk[], keptSegments: VideoSegment[]): SubtitleStruct[] {
+    // 计算时间映射
+    const timeMapping = this.calculateSubtitleTimeMapping(keptSegments, subtitleChunks);
+    
+    const subtitleStructs: SubtitleStruct[] = [];
+    
+    for (const chunk of subtitleChunks) {
+      const mappedTime = timeMapping.get(chunk);
+      if (!mappedTime) {
+        continue; // 这个字幕片段被删除了，跳过
+      }
+      
+      subtitleStructs.push({
+        start: mappedTime.startTime, // 已经是微秒
+        end: mappedTime.startTime + mappedTime.duration, // 已经是微秒
+        text: chunk.text
+      });
+    }
+    
+    return subtitleStructs;
+  }
+  
 }

@@ -1,1 +1,1 @@
-export { ExportPanel } from './ExportPanel';
+export { ExportDialog, type VideoExportOptions } from './ExportDialog';

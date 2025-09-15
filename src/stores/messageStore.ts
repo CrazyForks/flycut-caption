@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { toast } from 'sonner';
+import { saveFile } from '@/utils/createFileWriter';
 import type { Message, VideoProcessingProgress } from '@/types/message';
 
 interface MessageState {
@@ -33,7 +34,7 @@ interface MessageActions {
 
 type MessageStore = MessageState & MessageActions;
 
-const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
 export const useMessageStore = create<MessageStore>()(
   devtools(
@@ -170,15 +171,16 @@ export const useMessageStore = create<MessageStore>()(
       },
       
       completeVideoProcessing: (id, blob, filename) => {
-        const downloadHandler = () => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 100);
+        const downloadHandler = async () => {
+          const types = [{
+            description: 'Video files',
+            accept: {
+              'video/mp4': ['.mp4'],
+              'video/webm': ['.webm'],
+            },
+          }];
+          
+          await saveFile(blob, filename, types);
         };
         
         get().updateMessage(id, {

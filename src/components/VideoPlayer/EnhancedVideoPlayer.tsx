@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
+import { useChunks } from '@/stores/historyStore';
 import { 
   Play, 
   Pause, 
@@ -31,10 +32,7 @@ export function EnhancedVideoPlayer({
   onPause
 }: EnhancedVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  // TODO: Restore preview functionality after reimplementing session management
-  // const { session, timeUtils } = useEditingSession();
-  const session = null;
-  const timeUtils = null;
+  const chunks = useChunks();
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [localCurrentTime, setLocalCurrentTime] = useState(0);
@@ -43,14 +41,72 @@ export function EnhancedVideoPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [previewMode, setPreviewMode] = useState(true); // 预览模式：跳过删除片段
   
-  // 当前播放的新时间轴时间
-  const newTimelineTime = useMemo(() => {
-    if (!session || !timeUtils) return localCurrentTime;
-    return timeUtils.mapToNewTime(localCurrentTime) || 0;
-  }, [localCurrentTime, session, timeUtils]);
+  // 基于 chunks 数据计算保留的片段
+  const keptSegments = useMemo(() => {
+    return chunks
+      .filter(chunk => !chunk.deleted)
+      .map(chunk => ({
+        id: chunk.id,
+        start: chunk.timestamp[0],
+        end: chunk.timestamp[1],
+        duration: chunk.timestamp[1] - chunk.timestamp[0],
+        text: chunk.text
+      }))
+      .sort((a, b) => a.start - b.start);
+  }, [chunks]);
 
-  // 总的新时间轴时长
-  const newTimelineDuration = session?.currentDuration || duration;
+  // 删除的片段 - 暂时未使用，但保留以备将来可能的功能扩展
+  // const deletedSegments = useMemo(() => {
+  //   return chunks
+  //     .filter(chunk => chunk.deleted)
+  //     .map(chunk => ({
+  //       id: chunk.id,
+  //       start: chunk.timestamp[0],
+  //       end: chunk.timestamp[1],
+  //       duration: chunk.timestamp[1] - chunk.timestamp[0],
+  //       text: chunk.text
+  //     }))
+  //     .sort((a, b) => a.start - b.start);
+  // }, [chunks]);
+
+  // 计算新时间轴时间（预览模式下的压缩时间）
+  const newTimelineTime = useMemo(() => {
+    if (!previewMode || keptSegments.length === 0) return localCurrentTime;
+    
+    let newTime = 0;
+    for (const segment of keptSegments) {
+      if (localCurrentTime >= segment.start && localCurrentTime <= segment.end) {
+        // 当前时间在这个保留片段内
+        newTime += localCurrentTime - segment.start;
+        break;
+      } else if (localCurrentTime > segment.end) {
+        // 当前时间在这个片段之后
+        newTime += segment.duration;
+      } else {
+        // 当前时间在这个片段之前
+        break;
+      }
+    }
+    return newTime;
+  }, [localCurrentTime, previewMode, keptSegments]);
+
+  // 新时间轴总时长
+  const newTimelineDuration = useMemo(() => {
+    if (!previewMode) return duration;
+    return keptSegments.reduce((total, segment) => total + segment.duration, 0);
+  }, [previewMode, duration, keptSegments]);
+
+  // 检查当前时间是否在保留片段中
+  const isTimeInKeptSegments = useCallback((time: number) => {
+    return keptSegments.some(segment => 
+      time >= segment.start && time <= segment.end
+    );
+  }, [keptSegments]);
+
+  // 找到下一个保留片段
+  const findNextKeptSegment = useCallback((currentTime: number) => {
+    return keptSegments.find(segment => segment.start > currentTime);
+  }, [keptSegments]);
 
   // 处理视频时间更新
   const handleTimeUpdate = useCallback(() => {
@@ -60,15 +116,13 @@ export function EnhancedVideoPlayer({
     setLocalCurrentTime(time);
     
     // 在预览模式下，检查是否需要跳过删除的片段
-    if (previewMode && session && timeUtils && isPlaying) {
-      if (!timeUtils.isTimeInKeptSegments(time)) {
+    if (previewMode && keptSegments.length > 0 && isPlaying) {
+      if (!isTimeInKeptSegments(time)) {
         // 当前时间在删除片段中，跳转到下一个保留片段
-        const nextSegment = session.keptSegments.find(
-          (seg: any) => seg.originalStart > time
-        );
+        const nextSegment = findNextKeptSegment(time);
         
         if (nextSegment) {
-          videoRef.current.currentTime = nextSegment.originalStart;
+          videoRef.current.currentTime = nextSegment.start;
           return;
         } else {
           // 没有更多片段，暂停播放
@@ -81,9 +135,9 @@ export function EnhancedVideoPlayer({
     }
     
     // 通知外部组件时间更新（使用新时间轴或原始时间轴）
-    const notifyTime = previewMode && session ? newTimelineTime : localCurrentTime;
+    const notifyTime = previewMode && keptSegments.length > 0 ? newTimelineTime : localCurrentTime;
     onTimeUpdate?.(notifyTime);
-  }, [previewMode, session, timeUtils, isPlaying, newTimelineTime, onTimeUpdate, onPause, localCurrentTime]);
+  }, [previewMode, keptSegments, isPlaying, isTimeInKeptSegments, findNextKeptSegment, newTimelineTime, onTimeUpdate, onPause, localCurrentTime]);
 
   // 播放/暂停
   const togglePlayPause = useCallback(() => {
@@ -107,13 +161,30 @@ export function EnhancedVideoPlayer({
     let targetTime = time;
 
     // 如果在预览模式且传入的是新时间轴时间，需要转换为原始时间
-    if (previewMode && session && timeUtils) {
-      targetTime = timeUtils.mapToOriginalTime(time);
+    if (previewMode && keptSegments.length > 0) {
+      // 将新时间轴时间映射回原始时间
+      let remainingTime = time;
+      targetTime = 0;
+      
+      for (const segment of keptSegments) {
+        if (remainingTime <= segment.duration) {
+          targetTime = segment.start + remainingTime;
+          break;
+        } else {
+          remainingTime -= segment.duration;
+        }
+      }
+      
+      // 如果时间超出了所有保留片段，跳转到最后一个片段的结束
+      if (remainingTime > 0 && keptSegments.length > 0) {
+        const lastSegment = keptSegments[keptSegments.length - 1];
+        targetTime = lastSegment.end;
+      }
     }
 
     videoRef.current.currentTime = targetTime;
     setLocalCurrentTime(targetTime);
-  }, [previewMode, session, timeUtils]);
+  }, [previewMode, keptSegments]);
 
   // 快进/快退
   const skip = useCallback((seconds: number) => {
@@ -251,13 +322,13 @@ export function EnhancedVideoPlayer({
   }
 
   return (
-    <div className={cn('bg-card border rounded-lg overflow-hidden', className)}>
+    <div className={cn('bg-card rounded-lg overflow-hidden h-full flex flex-col', className)}>
       {/* 视频区域 */}
-      <div className="relative bg-black">
+      <div className="relative bg-black flex-1 flex items-center justify-center h-full w-full">
         <video
           ref={videoRef}
           src={videoUrl}
-          className="w-full h-auto"
+          className="max-h-full max-w-full object-contain"
           onClick={togglePlayPause}
         />
         
@@ -274,7 +345,7 @@ export function EnhancedVideoPlayer({
         )}
 
         {/* 预览模式指示器 */}
-        {previewMode && session && (
+        {previewMode && keptSegments.length > 0 && (
           <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
             预览模式
           </div>
@@ -296,18 +367,26 @@ export function EnhancedVideoPlayer({
               />
               
               {/* 保留片段显示（在预览模式下） */}
-              {previewMode && session && (
+              {previewMode && keptSegments.length > 0 && (
                 <>
-                  {session.keptSegments.map((segment: any) => (
-                    <div
-                      key={segment.id}
-                      className="absolute top-0 h-full bg-green-500/60"
-                      style={{
-                        left: `${(segment.start / newTimelineDuration) * 100}%`,
-                        width: `${(segment.duration / newTimelineDuration) * 100}%`,
-                      }}
-                    />
-                  ))}
+                  {keptSegments.map((segment, index) => {
+                    // 计算在新时间轴上的位置
+                    let segmentStartInNewTimeline = 0;
+                    for (let i = 0; i < index; i++) {
+                      segmentStartInNewTimeline += keptSegments[i].duration;
+                    }
+                    
+                    return (
+                      <div
+                        key={segment.id}
+                        className="absolute top-0 h-full bg-green-500/60"
+                        style={{
+                          left: `${(segmentStartInNewTimeline / newTimelineDuration) * 100}%`,
+                          width: `${(segment.duration / newTimelineDuration) * 100}%`,
+                        }}
+                      />
+                    );
+                  })}
                 </>
               )}
               
@@ -412,13 +491,13 @@ export function EnhancedVideoPlayer({
         </div>
 
         {/* 预览模式信息 */}
-        {previewMode && session && (
+        {previewMode && keptSegments.length > 0 && (
           <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
             <div className="flex justify-between">
               <span>预览模式：自动跳过删除片段</span>
               <span>
-                节省时间: {formatTime(session.totalDeletedTime)} 
-                ({(session.compressionRatio * 100).toFixed(1)}% 保留)
+                节省时间: {formatTime(duration - newTimelineDuration)} 
+                ({((newTimelineDuration / duration) * 100).toFixed(1)}% 保留)
               </span>
             </div>
           </div>

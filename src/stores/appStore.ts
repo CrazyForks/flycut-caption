@@ -13,7 +13,7 @@ import { hasWebGPU } from '@/utils/audioUtils'
 // 应用状态接口
 export interface AppState {
   // 应用程序阶段
-  stage: 'upload' | 'transcribe' | 'edit' | 'process' | 'export'
+  stage: 'upload' | 'transcribe' | 'edit'
   
   // 视频相关状态
   videoFile: VideoFile | null

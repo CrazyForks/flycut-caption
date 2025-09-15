@@ -9,7 +9,7 @@ import { FileUpload } from '@/components/FileUpload/FileUpload';
 import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import { SubtitleList } from '@/components/SubtitleEditor/SubtitleList';
 import { ASRPanel } from '@/components/ProcessingPanel/ASRPanel';
-import { ExportPanel } from '@/components/ExportPanel/ExportPanel';
+import { ExportDialog, type VideoExportOptions } from '@/components/ExportPanel/ExportDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ThemeInitializer } from '@/components/ThemeInitializer';
 import { ToastContainer, MessageCenterButton } from '@/components/MessageCenter';
@@ -20,6 +20,7 @@ import {
   useErrorVideoProcessing 
 } from '@/stores/messageStore';
 import { UnifiedVideoProcessor } from '@/services/UnifiedVideoProcessor';
+import { saveFile } from '@/utils/createFileWriter';
 import { Scissors, FileText, Upload, Download, Video } from 'lucide-react';
 import {
   Menubar,
@@ -89,6 +90,10 @@ function AppContent() {
   const [currentProcessingMessageId, setCurrentProcessingMessageId] = useState<string | null>(null);
   const [currentEngine, setCurrentEngine] = useState<VideoEngineType | null>(null);
   const processorRef = useRef<UnifiedVideoProcessor | null>(null);
+  
+  // 导出对话框状态
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportDialogType, setExportDialogType] = useState<'subtitles' | 'video'>('video');
   
   
   // const availableEngines = UnifiedVideoProcessor.getSupportedEngines();
@@ -173,7 +178,7 @@ function AppContent() {
 
 
   // 导出字幕
-  const handleExportSubtitles = useCallback((format: 'srt' | 'json') => {
+  const handleExportSubtitles = useCallback(async (format: 'srt' | 'json') => {
     const keptChunks = chunks.filter(chunk => !chunk.deleted);
     if (keptChunks.length === 0) {
       console.warn('没有可导出的字幕');
@@ -182,6 +187,10 @@ function AppContent() {
 
     let content: string;
     let filename: string;
+    let types: Array<{
+      description: string;
+      accept: Record<string, string[]>;
+    }>;
 
     if (format === 'srt') {
       content = keptChunks.map((chunk, index) => {
@@ -190,25 +199,24 @@ function AppContent() {
         return `${index + 1}\n${start} --> ${end}\n${chunk.text}\n`;
       }).join('\n');
       filename = `subtitles_${Date.now()}.srt`;
+      types = [{
+        description: 'SRT Subtitle files',
+        accept: { 'text/srt': ['.srt'] },
+      }];
     } else {
       content = JSON.stringify(keptChunks.map(chunk => ({
         text: chunk.text,
         timestamp: chunk.timestamp,
       })), null, 2);
       filename = `subtitles_${Date.now()}.json`;
+      types = [{
+        description: 'JSON files',
+        accept: { 'application/json': ['.json'] },
+      }];
     }
 
     const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    await saveFile(blob, filename, types);
   }, [chunks, formatTime]);
 
   // 重新上传文件
@@ -225,12 +233,14 @@ function AppContent() {
     setVideoFile(selectedVideoFile);
   };
 
-  // 从字幕生成视频片段 - 合并连续的保留区域
+  // 从字幕生成视频片段 - 包含所有片段的删除状态和字幕信息
   const videoSegments = useMemo((): VideoSegment[] => {
-    return chunks.filter(chunk => !chunk.deleted).map(chunk => ({
+    return chunks.map(chunk => ({
       start: chunk.timestamp[0],
       end: chunk.timestamp[1],
-      keep: true
+      keep: !chunk.deleted,
+      text: chunk.text,
+      id: chunk.id
     }));
   }, [chunks]);
 
@@ -241,13 +251,8 @@ function AppContent() {
       return;
     }
 
-    // 切换到处理阶段
-    setStage('process');
-
     try {
       await processVideo(videoFile, videoSegments, options);
-      // 处理完成后切换到导出阶段
-      setStage('export');
     } catch (error) {
       console.error('视频处理失败:', error);
       console.error('App视频处理错误详情:', { 
@@ -259,12 +264,34 @@ function AppContent() {
     }
   }, [videoFile, videoSegments, processVideo, setStage, setError]);
 
+  // 打开字幕导出对话框
+  const handleOpenSubtitleExportDialog = useCallback(() => {
+    setExportDialogType('subtitles');
+    setExportDialogOpen(true);
+  }, []);
+
+  // 打开视频导出对话框
+  const handleOpenVideoExportDialog = useCallback(() => {
+    setExportDialogType('video');
+    setExportDialogOpen(true);
+  }, []);
+
+  // 处理视频导出配置
+  const handleVideoExport = useCallback(async (options: VideoExportOptions) => {
+    await handleStartProcessing({
+      format: options.format === 'mp4' ? 'mp4' : 'webm',
+      quality: options.quality,
+      preserveAudio: true,
+      subtitleProcessing: options.subtitleProcessing,
+    });
+  }, [handleStartProcessing]);
+
 
 
   // 渲染左侧面板
   const renderLeftPanel = () => {
     return (
-      <div className="flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* 配置面板 */}
         {stage === 'transcribe' && <div className="flex-shrink-0 p-4">
           <div className="space-y-4">
@@ -277,7 +304,7 @@ function AppContent() {
         </div>}
 
         {/* 字幕编辑器 */}
-        {stage === 'edit' && <div className="flex-1 flex flex-col">
+        {stage === 'edit' && <div className="flex-1 flex flex-col overflow-hidden">
           <div className="p-4 border-b">
             <h3 className="text-sm font-medium flex items-center space-x-2">
               <FileText className="h-4 w-4" />
@@ -293,26 +320,6 @@ function AppContent() {
           </div>
         </div>}
 
-        {/* 历史记录和导出面板 */}
-        <div className="flex-shrink-0">
-          <div className="p-4 space-y-4">
-            {hasActiveChunks && (
-              <ExportPanel
-                onExportSubtitles={(format) => {
-                  console.log('导出字幕:', format);
-                }}
-                onExportVideo={(options) => {
-                  console.log('导出视频:', options);
-                  handleStartProcessing({
-                    format: options.format === 'mp4' ? 'mp4' : 'webm',
-                    quality: options.quality,
-                    preserveAudio: !options.includeSubtitles,
-                  });
-                }}
-              />
-            )}
-          </div>
-        </div>
       </div>
     );
   };
@@ -348,7 +355,7 @@ function AppContent() {
 
     // 有视频文件时显示视频播放器和波形图
     return (
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* 顶部状态栏 */}
         <div className="flex-shrink-0 p-4 bg-background/50">
           <div className="flex items-center justify-between">
@@ -375,19 +382,19 @@ function AppContent() {
         </div>
 
         {/* 视频播放器区域 */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 bg-black/5 flex items-center justify-center p-6">
-            <div className="w-full max-w-4xl">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 bg-black/5 flex items-center justify-center p-6 overflow-hidden">
+            <div className="w-full h-full max-w-4xl">
               <EnhancedVideoPlayer 
                 videoUrl={videoFile.url}
-                className="w-full rounded-lg overflow-hidden shadow-lg"
+                className="w-full h-full"
                 onTimeUpdate={(time) => setCurrentTime(time)}
               />
             </div>
           </div>
 
           {/* 波形图和时间线区域 */}
-          <div className="flex-shrink-0 h-32 border-t bg-background/50 p-4">
+          <div className="flex-shrink-0 h-32 bg-background/50 p-4">
             <div className="h-full bg-muted/30 rounded border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
                 <div className="text-xs mb-1">音频波形图</div>
@@ -453,13 +460,9 @@ function AppContent() {
                     <span className="hidden sm:inline">字幕</span>
                   </MenubarTrigger>
                   <MenubarContent align="start" className="min-w-[160px]">
-                    <MenubarItem onClick={() => handleExportSubtitles('srt')}>
+                    <MenubarItem onClick={handleOpenSubtitleExportDialog}>
                       <FileText className="h-4 w-4 mr-2" />
-                      导出 SRT 格式
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleExportSubtitles('json')}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      导出 JSON 格式
+                      导出字幕
                     </MenubarItem>
                   </MenubarContent>
                 </MenubarMenu>
@@ -476,15 +479,7 @@ function AppContent() {
                     </span>
                   </MenubarTrigger>
                   <MenubarContent align="start" className="min-w-[180px]">
-                    <MenubarItem
-                      onClick={() => {
-                        handleStartProcessing({
-                          format: 'mp4',
-                          quality: 'medium',
-                          preserveAudio: true,
-                        });
-                      }}
-                    >
+                    <MenubarItem onClick={handleOpenVideoExportDialog}>
                       <Video className="h-4 w-4 mr-2" />
                       处理并导出视频
                     </MenubarItem>
@@ -512,10 +507,19 @@ function AppContent() {
         </div>
 
         {/* 右侧面板 - 视频播放器和波形图 */}
-        <div className="flex-1 flex flex-col bg-muted/10">
+        <div className="flex-1 flex flex-col bg-muted/10 h-full">
           {renderRightPanel()}
         </div>
       </div>
+
+      {/* 导出配置对话框 */}
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        exportType={exportDialogType}
+        onExportSubtitles={handleExportSubtitles}
+        onExportVideo={handleVideoExport}
+      />
     </div>
   );
 }

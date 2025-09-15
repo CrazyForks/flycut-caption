@@ -5,12 +5,16 @@ import type { VideoFile, VideoSegment, VideoProcessingProgress } from './video';
 // 支持的视频处理引擎类型
 export type VideoEngineType = 'webav' | 'ffmpeg' | 'webcodecs';
 
+// 字幕处理类型
+export type SubtitleProcessingType = 'none' | 'soft' | 'hard';
+
 // 视频处理选项
 export interface VideoProcessingOptions {
   format?: 'mp4' | 'webm' | 'avi';
   outputFormat?: 'mp4' | 'webm' | 'avi';
   quality: 'high' | 'medium' | 'low';
   preserveAudio: boolean;
+  subtitleProcessing?: SubtitleProcessingType; // 字幕处理类型：无字幕、软烧录、硬烧录
   engine?: VideoEngineType; // 指定使用的引擎
 }
 

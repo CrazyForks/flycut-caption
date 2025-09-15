@@ -10,7 +10,6 @@ import { SubtitleItem } from './SubtitleItem';
 
 interface SubtitleListProps {
   className?: string;
-  maxHeight?: string;
   currentTime?: number;
   isPlaying?: boolean;
   onSeek?: (time: number) => void;
@@ -18,8 +17,7 @@ interface SubtitleListProps {
 }
 
 export function SubtitleList({ 
-  className,
-  maxHeight = '400px'
+  className
 }: SubtitleListProps) {
   const chunks = useChunks();
   const text = useHistoryText();
@@ -133,23 +131,7 @@ export function SubtitleList({
   }
 
   return (
-    <div className={cn('flex flex-col space-y-4', className)}>
-      {/* 统计信息 */}
-      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">{statistics.activeCount}</div>
-          <div className="text-muted-foreground">保留</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-red-600">{statistics.deletedCount}</div>
-          <div className="text-muted-foreground">删除</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold">{statistics.totalCount}</div>
-          <div className="text-muted-foreground">总计</div>
-        </div>
-      </div>
-
+    <div className={cn('flex flex-col space-y-4 h-full', className)}>
       {/* 操作按钮 */}
       <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-card">
         {/* 历史操作按钮组 */}
@@ -216,10 +198,9 @@ export function SubtitleList({
 
       {/* 字幕列表 */}
       <div 
-        className="border rounded-lg overflow-hidden"
-        style={{ maxHeight }}
+        className="border flex-1 rounded-lg overflow-hidden"
       >
-        <div className="overflow-y-auto space-y-1 p-2">
+        <div className="overflow-y-auto space-y-1 p-2 h-full">
           {transcript.chunks.map((chunk, index) => {
             const isActive = !chunk.deleted;
             const isCurrent = currentChunk?.id === chunk.id;
