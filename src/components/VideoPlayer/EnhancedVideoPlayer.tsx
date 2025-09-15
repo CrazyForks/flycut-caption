@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { useEditingSession } from '../HistoryPanel/useEditingSession';
 import { formatTime } from '@/utils/timeUtils';
 import { 
   Play, 
@@ -32,7 +31,10 @@ export function EnhancedVideoPlayer({
   onPause
 }: EnhancedVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { session, timeUtils } = useEditingSession();
+  // TODO: Restore preview functionality after reimplementing session management
+  // const { session, timeUtils } = useEditingSession();
+  const session = null;
+  const timeUtils = null;
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [localCurrentTime, setLocalCurrentTime] = useState(0);

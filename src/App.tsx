@@ -1,18 +1,34 @@
 // FlyCut Caption - 智能视频字幕裁剪工具
 
-import { useCallback, useMemo, useState, useRef } from 'react';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import { useChunks } from '@/stores/historyStore';
+import { useThemeStore } from '@/stores/themeStore';
+import { useHotkeys } from '@/hooks/useHotkeys';
 import { FileUpload } from '@/components/FileUpload/FileUpload';
 import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import { SubtitleList } from '@/components/SubtitleEditor/SubtitleList';
 import { ASRPanel } from '@/components/ProcessingPanel/ASRPanel';
-import { VideoProcessingPanel } from '@/components/ProcessingPanel/VideoProcessingPanel';
-import { HistoryPanel } from '@/components/HistoryPanel/HistoryPanel';
 import { ExportPanel } from '@/components/ExportPanel/ExportPanel';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeInitializer } from '@/components/ThemeInitializer';
+import { ToastContainer, MessageCenterButton } from '@/components/MessageCenter';
+import { 
+  useStartVideoProcessing, 
+  useUpdateVideoProcessingProgress, 
+  useCompleteVideoProcessing, 
+  useErrorVideoProcessing 
+} from '@/stores/messageStore';
 import { UnifiedVideoProcessor } from '@/services/UnifiedVideoProcessor';
-import { Scissors, Film, FileText, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Scissors, FileText, Upload, Download, Video } from 'lucide-react';
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarTrigger,
+} from "@/components/ui/menubar";
 import type { VideoFile, VideoSegment, VideoProcessingProgress } from '@/types/video';
 import type { VideoProcessingOptions, VideoEngineType } from '@/types/videoEngine';
 
@@ -22,6 +38,36 @@ function AppContent() {
   const error = useAppStore(state => state.error);
   const isLoading = useAppStore(state => state.isLoading);
   const chunks = useChunks();
+  
+  // 主题管理
+  const { theme, resolvedTheme, setTheme } = useThemeStore();
+  
+  // 初始化主题 - 确保在客户端正确应用
+  useEffect(() => {
+    // 确保主题正确应用到 DOM
+    const applyTheme = (theme: 'light' | 'dark') => {
+      const root = document.documentElement;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    };
+    
+    applyTheme(resolvedTheme);
+  }, [resolvedTheme]);
+  
+  // 消息中心钩子
+  const startVideoProcessing = useStartVideoProcessing();
+  const updateVideoProcessingProgress = useUpdateVideoProcessingProgress();
+  const completeVideoProcessing = useCompleteVideoProcessing();
+  const errorVideoProcessing = useErrorVideoProcessing();
+  
+  // 启用快捷键
+  useHotkeys({
+    enableHistoryHotkeys: true,
+    enableGlobalHotkeys: true, // 全局启用，即使焦点不在特定元素上也能工作
+  });
   
   // 在组件层用 useMemo 做过滤，保证只有 chunks 引用变更时才重新计算
   const activeChunks = useMemo(
@@ -40,16 +86,18 @@ function AppContent() {
   
   // 视频处理相关状态
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState<VideoProcessingProgress | null>(null);
-  const [processedVideoBlob, setProcessedVideoBlob] = useState<Blob | null>(null);
+  const [currentProcessingMessageId, setCurrentProcessingMessageId] = useState<string | null>(null);
   const [currentEngine, setCurrentEngine] = useState<VideoEngineType | null>(null);
   const processorRef = useRef<UnifiedVideoProcessor | null>(null);
+  
   
   // const availableEngines = UnifiedVideoProcessor.getSupportedEngines();
 
   const handleProgress = useCallback((progressData: VideoProcessingProgress) => {
-    setProgress(progressData);
-  }, []);
+    if (currentProcessingMessageId) {
+      updateVideoProcessingProgress(currentProcessingMessageId, progressData);
+    }
+  }, [currentProcessingMessageId, updateVideoProcessingProgress]);
 
   const processVideo = useCallback(async (
     videoFile: VideoFile,
@@ -61,10 +109,14 @@ function AppContent() {
       return;
     }
 
+    let messageId: string | null = null;
+
     try {
       setIsProcessing(true);
-      setProgress(null);
-      setProcessedVideoBlob(null);
+      
+      // 开始视频处理消息
+      messageId = startVideoProcessing('视频处理');
+      setCurrentProcessingMessageId(messageId);
 
       // 创建处理器（如果不存在）
       if (!processorRef.current) {
@@ -84,7 +136,12 @@ function AppContent() {
         preserveAudio: true
       });
 
-      setProcessedVideoBlob(resultBlob);
+      // 完成处理
+      if (messageId) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -1);
+        const filename = `cut_video_${timestamp}.${options?.format || 'mp4'}`;
+        completeVideoProcessing(messageId, resultBlob, filename);
+      }
 
     } catch (error) {
       console.error('视频处理失败:', error);
@@ -94,36 +151,71 @@ function AppContent() {
         options,
         stack: error instanceof Error ? error.stack : undefined 
       });
-      setProgress({
-        stage: 'error',
-        progress: 0,
-        message: '处理失败',
-        error: error instanceof Error ? error.message : '未知错误'
-      });
+      
+      if (messageId) {
+        errorVideoProcessing(messageId, error instanceof Error ? error.message : '未知错误');
+      }
     } finally {
       setIsProcessing(false);
+      setCurrentProcessingMessageId(null);
     }
-  }, [isProcessing, handleProgress, currentEngine]);
+  }, [isProcessing, currentEngine, startVideoProcessing, completeVideoProcessing, errorVideoProcessing, handleProgress]);
 
 
-  const downloadProcessedVideo = useCallback((filename?: string) => {
-    if (!processedVideoBlob) {
-      console.warn('没有处理完成的视频可以下载');
+  // 格式化时间为 SRT 格式
+  const formatTime = useCallback((seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 1000);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+  }, []);
+
+
+  // 导出字幕
+  const handleExportSubtitles = useCallback((format: 'srt' | 'json') => {
+    const keptChunks = chunks.filter(chunk => !chunk.deleted);
+    if (keptChunks.length === 0) {
+      console.warn('没有可导出的字幕');
       return;
     }
 
-    const url = URL.createObjectURL(processedVideoBlob);
+    let content: string;
+    let filename: string;
+
+    if (format === 'srt') {
+      content = keptChunks.map((chunk, index) => {
+        const start = formatTime(chunk.timestamp[0]);
+        const end = formatTime(chunk.timestamp[1]);
+        return `${index + 1}\n${start} --> ${end}\n${chunk.text}\n`;
+      }).join('\n');
+      filename = `subtitles_${Date.now()}.srt`;
+    } else {
+      content = JSON.stringify(keptChunks.map(chunk => ({
+        text: chunk.text,
+        timestamp: chunk.timestamp,
+      })), null, 2);
+      filename = `subtitles_${Date.now()}.json`;
+    }
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename || `processed_video_${Date.now()}.mp4`;
+    a.download = filename;
     
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     
-    // 清理URL对象
     setTimeout(() => URL.revokeObjectURL(url), 100);
-  }, [processedVideoBlob]);
+  }, [chunks, formatTime]);
+
+  // 重新上传文件
+  const handleReupload = useCallback(() => {
+    const setVideoFile = useAppStore.getState().setVideoFile;
+    setVideoFile(null);
+  }, []);
 
 
   const handleFileSelect = (selectedVideoFile: VideoFile) => {
@@ -172,9 +264,9 @@ function AppContent() {
   // 渲染左侧面板
   const renderLeftPanel = () => {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-y-auto">
         {/* 配置面板 */}
-        <div className="flex-shrink-0 p-4 border-b">
+        {stage === 'transcribe' && <div className="flex-shrink-0 p-4">
           <div className="space-y-4">
             {/* 语言选择 */}
             <div>
@@ -182,10 +274,10 @@ function AppContent() {
               <ASRPanel />
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* 字幕编辑器 */}
-        <div className="flex-1 flex flex-col">
+        {stage === 'edit' && <div className="flex-1 flex flex-col">
           <div className="p-4 border-b">
             <h3 className="text-sm font-medium flex items-center space-x-2">
               <FileText className="h-4 w-4" />
@@ -199,13 +291,11 @@ function AppContent() {
           <div className="flex-1 overflow-hidden">
             <SubtitleList />
           </div>
-        </div>
+        </div>}
 
-        {/* 历史记录和导出 */}
-        <div className="flex-shrink-0 border-t">
+        {/* 历史记录和导出面板 */}
+        <div className="flex-shrink-0">
           <div className="p-4 space-y-4">
-            <HistoryPanel />
-            
             {hasActiveChunks && (
               <ExportPanel
                 onExportSubtitles={(format) => {
@@ -260,7 +350,7 @@ function AppContent() {
     return (
       <div className="flex-1 flex flex-col">
         {/* 顶部状态栏 */}
-        <div className="flex-shrink-0 p-4 border-b bg-background/50">
+        <div className="flex-shrink-0 p-4 bg-background/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 text-sm">
               <div className="w-2 h-2 bg-green-500 rounded-full" />
@@ -307,18 +397,6 @@ function AppContent() {
           </div>
         </div>
 
-        {/* 处理面板 */}
-        {hasActiveChunks && stage === 'edit' && (
-          <div className="flex-shrink-0 border-t bg-background/50 p-4">
-            <VideoProcessingPanel
-              isProcessing={isProcessing}
-              progress={progress}
-              processedVideoBlob={processedVideoBlob}
-              onStartProcessing={handleStartProcessing}
-              onDownload={downloadProcessedVideo}
-            />
-          </div>
-        )}
       </div>
     );
   };
@@ -326,7 +404,7 @@ function AppContent() {
   return (
     <div className="h-screen bg-background flex flex-col">
       {/* 顶部标题栏 */}
-      <header className="flex-shrink-0 border-b bg-card">
+      <header className="flex-shrink-0 bg-card shadow-sm border-b border-background/90 z-10">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -339,36 +417,88 @@ function AppContent() {
               </div>
             </div>
             
-            {/* 阶段指示器 */}
-            <div className="hidden md:flex items-center space-x-3 text-xs">
-              <div className={cn(
-                'flex items-center space-x-1 px-2 py-1 rounded-full',
-                stage === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              )}>
-                <Upload className="h-3 w-3" />
-                <span>上传</span>
-              </div>
-              <div className={cn(
-                'flex items-center space-x-1 px-2 py-1 rounded-full',
-                stage === 'transcribe' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              )}>
-                <FileText className="h-3 w-3" />
-                <span>转录</span>
-              </div>
-              <div className={cn(
-                'flex items-center space-x-1 px-2 py-1 rounded-full',
-                stage === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              )}>
-                <Scissors className="h-3 w-3" />
-                <span>编辑</span>
-              </div>
-              <div className={cn(
-                'flex items-center space-x-1 px-2 py-1 rounded-full',
-                (stage === 'process' || stage === 'export') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-              )}>
-                <Film className="h-3 w-3" />
-                <span>导出</span>
-              </div>
+            <div className="flex items-center space-x-4">
+              {/* 主题切换按钮 */}
+              <ThemeToggle variant="button" />
+              
+              {/* 消息中心按钮 */}
+              <MessageCenterButton />
+              
+              {/* 操作菜单栏 - 平铺展示 */}
+              <Menubar className="h-auto border bg-card rounded-lg p-1 gap-0.5 shadow-sm">
+                {/* 文件菜单 */}
+                <MenubarMenu>
+                  <MenubarTrigger 
+                    className="h-8 px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+                    disabled={false}
+                  >
+                    <Upload className="h-4 w-4 mr-1.5" />
+                    <span className="hidden sm:inline">文件</span>
+                  </MenubarTrigger>
+                  <MenubarContent align="start" className="min-w-[160px]">
+                    <MenubarItem onClick={handleReupload}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      重新上传视频
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+
+                {/* 字幕菜单 */}
+                <MenubarMenu>
+                  <MenubarTrigger 
+                    className="h-8 px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    disabled={!hasActiveChunks}
+                  >
+                    <FileText className="h-4 w-4 mr-1.5" />
+                    <span className="hidden sm:inline">字幕</span>
+                  </MenubarTrigger>
+                  <MenubarContent align="start" className="min-w-[160px]">
+                    <MenubarItem onClick={() => handleExportSubtitles('srt')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      导出 SRT 格式
+                    </MenubarItem>
+                    <MenubarItem onClick={() => handleExportSubtitles('json')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      导出 JSON 格式
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+
+                {/* 视频菜单 */}
+                <MenubarMenu>
+                  <MenubarTrigger 
+                    className="h-8 px-3 py-1.5 text-sm text-foreground hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    disabled={!hasActiveChunks || stage !== 'edit' || isProcessing}
+                  >
+                    <Video className="h-4 w-4 mr-1.5" />
+                    <span className="hidden sm:inline">
+                      {isProcessing ? '处理中' : '视频'}
+                    </span>
+                  </MenubarTrigger>
+                  <MenubarContent align="start" className="min-w-[180px]">
+                    <MenubarItem
+                      onClick={() => {
+                        handleStartProcessing({
+                          format: 'mp4',
+                          quality: 'medium',
+                          preserveAudio: true,
+                        });
+                      }}
+                    >
+                      <Video className="h-4 w-4 mr-2" />
+                      处理并导出视频
+                    </MenubarItem>
+                    <MenubarSeparator />
+                    <MenubarItem
+                      disabled={true}
+                      className="data-[disabled]:opacity-50"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      查看消息中心下载视频
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+              </Menubar>
             </div>
           </div>
         </div>
@@ -377,7 +507,7 @@ function AppContent() {
       {/* 主要内容区域 - 左右分栏 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧面板 - 字幕编辑器和配置 */}
-        <div className="w-96 flex-shrink-0 border-r bg-card">
+        <div className="w-96 flex-shrink-0 bg-card shadow-sm">
           {renderLeftPanel()}
         </div>
 
@@ -391,7 +521,13 @@ function AppContent() {
 }
 
 function App() {
-  return <AppContent />;
+  return (
+    <>
+      <ThemeInitializer />
+      <AppContent />
+      <ToastContainer />
+    </>
+  );
 }
 
 export default App;

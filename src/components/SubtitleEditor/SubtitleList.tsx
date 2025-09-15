@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useHistoryStore, useChunks, useHistoryText, useHistoryLanguage, useHistoryDuration } from '@/stores/historyStore';
+import { useHistoryStore, useChunks, useHistoryText, useHistoryLanguage, useHistoryDuration, useCanUndo, useCanRedo, useUndo, useRedo } from '@/stores/historyStore';
 import { useAppStore } from '@/stores/appStore';
 import { formatTime, isTimeInRange } from '@/utils/timeUtils';
-import { FileText, Play, Trash2, RotateCcw, Check, Clock } from 'lucide-react';
+import { FileText, Trash2, RotateCcw, Check, Undo, Redo } from 'lucide-react';
+import { SubtitleItem } from './SubtitleItem';
 
 interface SubtitleListProps {
   className?: string;
@@ -24,6 +25,12 @@ export function SubtitleList({
   const text = useHistoryText();
   const language = useHistoryLanguage();
   const duration = useHistoryDuration();
+  
+  // 历史记录操作
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const undo = useUndo();
+  const redo = useRedo();
   
   // 在组件层用 useMemo 创建 transcript 对象，避免无限循环
   const transcript = useMemo(() => ({
@@ -74,12 +81,6 @@ export function SubtitleList({
     };
   }, [transcript.chunks, activeChunks]);
 
-  const handleChunkClick = (chunkId: string) => {
-    const chunk = transcript.chunks.find(c => c.id === chunkId);
-    if (chunk) {
-      setCurrentTime(chunk.timestamp[0]);
-    }
-  };
 
   const handleToggleSelection = (chunkId: string) => {
     const newSelected = new Set(selectedIds);
@@ -151,26 +152,52 @@ export function SubtitleList({
 
       {/* 操作按钮 */}
       <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-card">
-        <button
-          onClick={handleSelectAll}
-          className="flex items-center space-x-1 px-3 py-1.5 text-xs border rounded hover:bg-muted transition-colors"
-        >
-          <Check className="h-3 w-3" />
-          <span>全选</span>
-        </button>
-        
-        <button
-          onClick={handleClearSelection}
-          className="flex items-center space-x-1 px-3 py-1.5 text-xs border rounded hover:bg-muted transition-colors"
-        >
-          <RotateCcw className="h-3 w-3" />
-          <span>清除选择</span>
-        </button>
+        {/* 历史操作按钮组 */}
+        <div className="flex items-center space-x-1 pr-2 border-r border-border">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="撤销上一步操作"
+          >
+            <Undo className="h-3 w-3" />
+            <span className="hidden sm:inline">撤销</span>
+          </button>
+          
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="重做上一步操作"
+          >
+            <Redo className="h-3 w-3" />
+            <span className="hidden sm:inline">重做</span>
+          </button>
+        </div>
+
+        {/* 选择操作按钮组 */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={handleSelectAll}
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-muted transition-colors"
+          >
+            <Check className="h-3 w-3" />
+            <span className="hidden sm:inline">全选</span>
+          </button>
+          
+          <button
+            onClick={handleClearSelection}
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-muted transition-colors"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span className="hidden sm:inline">清除</span>
+          </button>
+        </div>
         
         <button
           onClick={handleDeleteSelected}
           disabled={selectedIds.size === 0}
-          className="flex items-center space-x-1 px-3 py-1.5 text-xs border rounded hover:bg-red-50 hover:border-red-200 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-red-50 hover:border-red-200 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <Trash2 className="h-3 w-3" />
           <span>删除选中 ({selectedIds.size})</span>
@@ -179,7 +206,7 @@ export function SubtitleList({
         {statistics.deletedCount > 0 && (
           <button
             onClick={handleRestoreDeleted}
-            className="flex items-center space-x-1 px-3 py-1.5 text-xs border rounded hover:bg-green-50 hover:border-green-200 text-green-600 transition-colors"
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs border rounded hover:bg-green-50 hover:border-green-200 text-green-600 transition-colors"
           >
             <RotateCcw className="h-3 w-3" />
             <span>恢复删除 ({statistics.deletedCount})</span>
@@ -199,70 +226,16 @@ export function SubtitleList({
             const isSelected = selectedIds.has(chunk.id);
             
             return (
-              <div
+              <SubtitleItem
                 key={chunk.id}
-                className={cn(
-                  'group flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all',
-                  isCurrent && 'ring-2 ring-primary ring-offset-1',
-                  isSelected && 'bg-blue-50 dark:bg-blue-950/30 border-blue-200',
-                  !isActive && 'opacity-50 bg-red-50 dark:bg-red-950/30',
-                  isActive && !isSelected && 'hover:bg-muted/50'
-                )}
-                onClick={() => handleChunkClick(chunk.id)}
-              >
-                {/* 选择框 */}
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleToggleSelection(chunk.id);
-                  }}
-                  className="mt-1 rounded"
-                />
-
-                {/* 序号和时间 */}
-                <div className="flex-shrink-0 text-xs text-muted-foreground w-16">
-                  <div className="font-mono">#{index + 1}</div>
-                  <div className="flex items-center space-x-1 mt-1">
-                    <Clock className="h-3 w-3" />
-                    <span>{formatTime(chunk.timestamp[0])}</span>
-                  </div>
-                </div>
-
-                {/* 字幕内容 */}
-                <div className="flex-1 min-w-0">
-                  <div className={cn(
-                    'text-sm leading-relaxed',
-                    !isActive && 'line-through text-muted-foreground'
-                  )}>
-                    {chunk.text}
-                  </div>
-                  <div className="flex items-center space-x-3 mt-2 text-xs text-muted-foreground">
-                    <span>
-                      {formatTime(chunk.timestamp[0])} - {formatTime(chunk.timestamp[1])}
-                    </span>
-                    <span>
-                      时长: {((chunk.timestamp[1] - chunk.timestamp[0])).toFixed(1)}s
-                    </span>
-                    {!isActive && (
-                      <span className="text-red-500 font-medium">已删除</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 播放按钮 */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentTime(chunk.timestamp[0]);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-opacity"
-                  title="跳转到此处"
-                >
-                  <Play className="h-4 w-4 text-primary" />
-                </button>
-              </div>
+                chunk={chunk}
+                index={index}
+                isActive={isActive}
+                isCurrent={isCurrent}
+                isSelected={isSelected}
+                onToggleSelection={handleToggleSelection}
+                onSeekTo={setCurrentTime}
+              />
             );
           })}
         </div>

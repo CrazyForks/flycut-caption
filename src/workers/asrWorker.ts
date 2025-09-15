@@ -1,5 +1,5 @@
 // ASR Worker - 基于 Whisper 的语音识别处理
-// 基于 transformers.js-examples/whisper-word-timestamps 实现
+// 生成句子级别时间戳，适合字幕编辑
 
 import { pipeline } from '@huggingface/transformers';
 import type { ASRProgress, SubtitleTranscript } from '../types/subtitle';
@@ -20,10 +20,10 @@ const PER_DEVICE_CONFIG = {
 } as const;
 
 /**
- * ASR 管道单例模式 - 简化版本，基于官方示例
+ * ASR 管道单例模式 - 句子级别时间戳版本
  */
 class PipelineSingleton {
-  static model_id = 'onnx-community/whisper-base_timestamped';
+  static model_id = 'onnx-community/whisper-base';
   static instance: Awaited<ReturnType<typeof pipeline>> | null = null;
 
   static async getInstance(progress_callback?: (progress: unknown) => void, device: 'webgpu' | 'wasm' = 'webgpu') {
@@ -102,24 +102,41 @@ async function run({ audio, language }: { audio: Float32Array; language: string 
     
     const result = await transcriber(audio, {
       language: validLanguage,
-      return_timestamps: 'word',
+      return_timestamps: true,  // 生成句子级别时间戳
       chunk_length_s: 30,
     });
 
     const end = performance.now();
     console.log('ASR识别原始结果:', result);
 
-    // 处理结果，生成带 ID 的字幕片段
+    // 处理结果，生成句子级别的字幕片段
+    let chunks = [];
+    let duration = 0;
+    
+    if (result.chunks && Array.isArray(result.chunks)) {
+      // Whisper base 模型返回句子级别的chunks
+      chunks = result.chunks.map((chunk: { text: string; timestamp: [number, number] }, index: number) => ({
+        text: chunk.text.trim(),
+        timestamp: chunk.timestamp,
+        id: `sentence-${index}`,
+        selected: false,
+      }));
+      duration = Math.max(...result.chunks.map((c: { timestamp: [number, number] }) => c.timestamp[1]));
+    } else if (result.text) {
+      // 如果没有chunks，创建单个片段
+      chunks = [{
+        text: result.text.trim(),
+        timestamp: [0, duration || 0] as [number, number],
+        id: 'sentence-0',
+        selected: false,
+      }];
+    }
+
     const transcript: SubtitleTranscript = {
       text: result.text,
-      chunks: result.chunks.map((chunk: { text: string; timestamp: [number, number] }, index: number) => ({
-        text: chunk.text,
-        timestamp: chunk.timestamp,
-        id: `chunk-${index}`,
-        selected: false,
-      })),
+      chunks,
       language,
-      duration: Math.max(...result.chunks.map((c: { timestamp: [number, number] }) => c.timestamp[1])),
+      duration,
     };
 
     console.log('ASR识别完成:', { 

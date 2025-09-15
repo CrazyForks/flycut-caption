@@ -4,6 +4,7 @@ import { useCallback, useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores/appStore';
 import { useHistoryStore } from '@/stores/historyStore';
+import { useShowSuccess, useShowError, useShowInfo, useShowWarning } from '@/stores/messageStore';
 import { asrService } from '@/services/asrService';
 import type { ASRProgress } from '@/types/subtitle';
 import { readFileAsArrayBuffer } from '@/utils/fileUtils';
@@ -36,11 +37,18 @@ export function ASRPanel({ className }: ASRPanelProps) {
   const setLoading = useAppStore(state => state.setLoading);
   const setLanguage = useAppStore(state => state.setLanguage);
   const setDeviceType = useAppStore(state => state.setDeviceType);
+  const setStage = useAppStore(state => state.setStage);
   
   // 使用 historyStore 管理转录内容
   const setTranscript = useHistoryStore(state => state.setTranscript);
   // const transcript = useTranscript(); // 使用预定义的选择器，避免无限重渲染
   const hasTranscriptChunks = useHistoryStore((state) => state.chunks.length > 0);
+  
+  // 消息中心操作
+  const showSuccess = useShowSuccess();
+  const showError = useShowError();
+  const showInfo = useShowInfo();
+  const showWarning = useShowWarning();
 
   const [showSettings, setShowSettings] = useState(false);
   const audioBufferRef = useRef<ArrayBuffer | null>(null);
@@ -53,12 +61,35 @@ export function ASRPanel({ className }: ASRPanelProps) {
       // 处理完成状态
       if (progress.status === 'complete' && progress.result) {
         setTranscript(progress.result);
+        setStage('edit'); // 自动切换到编辑阶段
+        const chunkCount = progress.result.chunks?.length || 0;
+        const duration = progress.time ? (progress.time / 1000).toFixed(1) : '0';
+        showSuccess(
+          '语音识别完成', 
+          `成功识别 ${chunkCount} 个句子片段，耗时 ${duration} 秒`
+        );
       }
 
       // 处理错误状态
       if (progress.status === 'error') {
         console.error('ASR处理进度错误:', progress.error);
         setError(`ASR处理失败: ${progress.error}`);
+        showError('语音识别失败', progress.error || '未知错误');
+      }
+      
+      // 处理加载状态
+      if (progress.status === 'loading') {
+        showInfo('正在加载模型', progress.data || '首次使用需要下载模型文件...');
+      }
+      
+      // 处理运行状态
+      if (progress.status === 'running') {
+        showInfo('正在处理音频', '正在识别语音内容，请稍候...');
+      }
+      
+      // 处理模型准备完成
+      if (progress.status === 'loaded') {
+        showSuccess('模型加载成功', '语音识别模型已准备就绪，可以开始转录');
       }
     };
 
@@ -67,7 +98,7 @@ export function ASRPanel({ className }: ASRPanelProps) {
     return () => {
       asrService.setProgressCallback(() => {});
     };
-  }, [setASRProgress, setTranscript, setError]);
+  }, [setASRProgress, setTranscript, setError, setStage, showSuccess, showError, showInfo, showWarning]);
 
   // 设置设备类型
   useEffect(() => {
@@ -84,92 +115,114 @@ export function ASRPanel({ className }: ASRPanelProps) {
     try {
       setLoading(true);
       await asrService.loadModel();
+      showSuccess('模型加载成功', '语音识别模型已准备就绪');
     } catch (error) {
       console.error('ASR模型加载失败:', error);
-      setError(error instanceof Error ? error.message : '模型加载失败');
+      const errorMessage = error instanceof Error ? error.message : '模型加载失败';
+      setError(errorMessage);
+      showError('模型加载失败', errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setError]);
+  }, [setLoading, setError, showSuccess, showError]);
 
   // 开始转录
   const startTranscription = useCallback(async (audioBuffer: ArrayBuffer) => {
     if (!videoFile) {
-      setError('请先上传视频文件');
+      const errorMsg = '请先上传视频文件';
+      setError(errorMsg);
+      showWarning('无法开始转录', errorMsg);
       return;
     }
 
     try {
       setLoading(true);
+      showInfo('开始语音识别', '正在准备音频数据...');
       
       // 先确保模型已准备
       if (!asrService.isReady()) {
         setASRProgress({ status: 'loading', data: '准备模型中...' });
+        showInfo('准备模型', '首次使用需要下载和加载模型...');
         await asrService.prepareModel();
       }
 
       // 然后进行转录
       setASRProgress({ status: 'loading', data: '开始转录音频...' });
+      showInfo('开始转录', `正在识别${language === 'zh' ? '中文' : '英文'}语音内容...`);
       
-      const transcriptResult = await asrService.transcribeAudio(
+      await asrService.transcribeAudio(
         audioBuffer,
         language
       );
 
-      setTranscript(transcriptResult);
+      // 注意：不在这里设置 transcript，让 progress callback 统一处理
     } catch (error) {
       console.error('ASR转录失败:', error);
-      setError(error instanceof Error ? error.message : '转录失败');
+      const errorMessage = error instanceof Error ? error.message : '转录失败';
+      setError(errorMessage);
+      showError('转录过程失败', errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [videoFile, language, setLoading, setError, setASRProgress, setTranscript]);
+  }, [videoFile, language, setLoading, setError, setASRProgress, showInfo, showWarning, showError]);
 
   // 重新开始转录
   const retryTranscription = useCallback(async (audioBuffer: ArrayBuffer) => {
     // 重置状态
     setASRProgress({ status: 'loading', data: '准备重新转录...' });
+    showInfo('重新开始转录', '正在重新处理音频数据...');
     await startTranscription(audioBuffer);
-  }, [startTranscription, setASRProgress]);
+  }, [startTranscription, setASRProgress, showInfo]);
 
   // 更改设备类型
   const changeDevice = useCallback((device: 'webgpu' | 'wasm') => {
     setDeviceType(device);
-  }, [setDeviceType]);
+    const deviceName = device === 'webgpu' ? 'WebGPU (GPU加速)' : 'WebAssembly (CPU)';
+    showInfo('设备切换成功', `已切换到 ${deviceName}`);
+  }, [setDeviceType, showInfo]);
 
   // 更改语言
   const changeLanguage = useCallback((newLanguage: string) => {
     setLanguage(newLanguage);
-  }, [setLanguage]);
+    const languageName = newLanguage === 'zh' ? '中文' : newLanguage === 'en' ? '英文' : newLanguage;
+    showInfo('语言切换成功', `识别语言已设置为 ${languageName}`);
+  }, [setLanguage, showInfo]);
 
   // 准备音频数据
   const prepareAudioData = useCallback(async () => {
-    if (!videoFile) return null;
+    if (!videoFile) {
+      showWarning('缺少视频文件', '请先选择要处理的视频文件');
+      return null;
+    }
 
     try {
+      showInfo('准备音频数据', '正在从视频文件中提取音频...');
       audioBufferRef.current = await readFileAsArrayBuffer(videoFile.file);
       return audioBufferRef.current;
     } catch (error) {
       console.error('音频数据准备失败:', error);
       console.error('音频数据准备错误详情:', { videoFile: videoFile?.name, error });
+      const errorMessage = '音频数据提取失败，请检查文件格式';
+      showError('音频处理失败', errorMessage);
       return null;
     }
-  }, [videoFile]);
+  }, [videoFile, showInfo, showWarning, showError]);
 
   // 开始ASR处理
   const handleStartASR = useCallback(async () => {
     const audioBuffer = await prepareAudioData();
     if (!audioBuffer) {
-      alert('音频数据准备失败');
+      showError('无法开始处理', '音频数据准备失败，请重试');
       return;
     }
 
     if (!isReady()) {
+      showInfo('准备模型', '正在加载语音识别模型...');
       await loadModel();
     }
 
     await startTranscription(audioBuffer);
-  }, [prepareAudioData, isReady, loadModel, startTranscription]);
+  }, [prepareAudioData, isReady, loadModel, startTranscription, showError, showInfo]);
 
   // 重试ASR处理
   const handleRetryASR = useCallback(async () => {
@@ -190,53 +243,24 @@ export function ASRPanel({ className }: ASRPanelProps) {
     changeDevice(newDevice);
   }, [changeDevice]);
 
-  // 获取状态显示
-  const getStatusDisplay = () => {
+  // 获取简化状态显示
+  const getSimpleStatus = () => {
     if (error) {
-      return {
-        icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-        text: '处理失败',
-        description: error,
-        color: 'text-red-600',
-      };
+      return { icon: <AlertCircle className="h-4 w-4 text-red-500" />, text: '处理失败', color: 'text-red-600' };
     }
-
     if (asrProgress?.status === 'complete') {
-      return {
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-        text: '处理完成',
-        description: `用时 ${asrProgress.time ? (asrProgress.time / 1000).toFixed(1) : '0'}s`,
-        color: 'text-green-600',
-      };
+      return { icon: <CheckCircle2 className="h-4 w-4 text-green-500" />, text: '已完成', color: 'text-green-600' };
     }
-
     if (isLoading || asrProgress?.status === 'loading' || asrProgress?.status === 'running') {
-      return {
-        icon: <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />,
-        text: asrProgress?.data || '正在处理...',
-        description: asrProgress?.status === 'running' ? '正在识别语音内容' : '正在加载模型',
-        color: 'text-blue-600',
-      };
+      return { icon: <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />, text: '处理中', color: 'text-blue-600' };
     }
-
     if (isReady()) {
-      return {
-        icon: <Mic className="h-5 w-5 text-green-500" />,
-        text: '模型已就绪',
-        description: '可以开始语音识别',
-        color: 'text-green-600',
-      };
+      return { icon: <Mic className="h-4 w-4 text-green-500" />, text: '已就绪', color: 'text-green-600' };
     }
-
-    return {
-      icon: <Play className="h-5 w-5 text-gray-500" />,
-      text: '准备开始',
-      description: '点击开始生成字幕',
-      color: 'text-gray-600',
-    };
+    return { icon: <Play className="h-4 w-4 text-muted-foreground" />, text: '待开始', color: 'text-muted-foreground' };
   };
 
-  const statusDisplay = getStatusDisplay();
+  const statusDisplay = getSimpleStatus();
   const canStart = videoFile && !isLoading && !asrProgress?.status;
   const canRetry = error || (asrProgress?.status === 'complete' && hasTranscriptChunks);
 
@@ -304,9 +328,6 @@ export function ASRPanel({ className }: ASRPanelProps) {
         <div className="flex-1">
           <p className={cn('font-medium', statusDisplay.color)}>
             {statusDisplay.text}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {statusDisplay.description}
           </p>
         </div>
       </div>

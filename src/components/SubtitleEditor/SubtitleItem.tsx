@@ -4,108 +4,101 @@ import { useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
 import type { SubtitleChunk } from '@/types/subtitle';
-import { Trash2, Clock } from 'lucide-react';
+import { Play, Clock } from 'lucide-react';
 
 interface SubtitleItemProps {
   chunk: SubtitleChunk;
+  index: number;
   isSelected: boolean;
   isCurrent: boolean;
+  isActive: boolean;
   onToggleSelection: (chunkId: string) => void;
-  onSeekTo: (chunk: SubtitleChunk) => void;
+  onSeekTo: (time: number) => void;
   className?: string;
 }
 
 export function SubtitleItem({
   chunk,
+  index,
   isSelected,
   isCurrent,
+  isActive,
   onToggleSelection,
   onSeekTo,
   className,
 }: SubtitleItemProps) {
-  const [start, end] = chunk.timestamp;
-
-  const handleToggleSelection = useCallback(() => {
+  const handleToggleSelection = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     onToggleSelection(chunk.id);
   }, [chunk.id, onToggleSelection]);
 
-  const handleSeekTo = useCallback(() => {
-    onSeekTo(chunk);
-  }, [chunk, onSeekTo]);
+  const handleChunkClick = useCallback(() => {
+    onSeekTo(chunk.timestamp[0]);
+  }, [chunk.timestamp, onSeekTo]);
+
+  const handlePlayClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSeekTo(chunk.timestamp[0]);
+  }, [chunk.timestamp, onSeekTo]);
 
   return (
     <div
       className={cn(
-        'group flex items-start space-x-3 p-3 rounded-lg border transition-all duration-200',
-        'hover:bg-muted/50 cursor-pointer',
-        isCurrent && 'bg-primary/10 border-primary ring-1 ring-primary/50',
-        isSelected && 'bg-destructive/10 border-destructive',
-        !isSelected && !isCurrent && 'border-border',
+        'group flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-all',
+        isCurrent && 'ring-2 ring-primary ring-offset-1',
+        isSelected && 'bg-blue-50 dark:bg-blue-950/30 border-blue-200',
+        !isActive && 'opacity-50 bg-red-50 dark:bg-red-950/30',
+        isActive && !isSelected && 'hover:bg-muted/50',
         className
       )}
+      onClick={handleChunkClick}
     >
-      {/* 选择复选框 */}
-      <div className="flex-shrink-0 pt-1">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={handleToggleSelection}
-          className="w-4 h-4 rounded border-gray-300 text-destructive focus:ring-destructive focus:ring-2"
-          title={isSelected ? '取消删除' : '标记删除'}
-        />
-      </div>
+      {/* 选择框 */}
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={handleToggleSelection}
+        className="mt-1 rounded"
+      />
 
-      {/* 内容区域 */}
-      <div className="flex-1 min-w-0">
-        {/* 时间信息 */}
-        <div className="flex items-center space-x-2 mb-2">
-          <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-          <span className="text-xs text-muted-foreground font-mono">
-            {formatTime(start)} → {formatTime(end)}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({((end - start)).toFixed(1)}s)
-          </span>
+      {/* 序号和时间 */}
+      <div className="flex-shrink-0 text-xs text-muted-foreground w-16">
+        <div className="font-mono">#{index + 1}</div>
+        <div className="flex items-center space-x-1 mt-1">
+          <Clock className="h-3 w-3" />
+          <span>{formatTime(chunk.timestamp[0])}</span>
         </div>
-
-        {/* 字幕文本 */}
-        <p 
-          className={cn(
-            'text-sm leading-relaxed break-words',
-            isCurrent && 'font-medium text-primary',
-            isSelected && 'text-muted-foreground line-through',
-            !isSelected && !isCurrent && 'text-foreground'
-          )}
-          onClick={handleSeekTo}
-          title="点击跳转到此时间点"
-        >
-          {chunk.text.trim()}
-        </p>
-
-        {/* 状态指示器 */}
-        {isCurrent && (
-          <div className="mt-2 flex items-center space-x-1">
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <span className="text-xs text-primary font-medium">当前播放</span>
-          </div>
-        )}
       </div>
 
-      {/* 操作按钮 */}
-      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={handleToggleSelection}
-          className={cn(
-            'p-1.5 rounded-md transition-colors',
-            isSelected 
-              ? 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30' 
-              : 'text-destructive hover:bg-destructive/10'
+      {/* 字幕内容 */}
+      <div className="flex-1 min-w-0">
+        <div className={cn(
+          'text-sm leading-relaxed text-primary',
+          !isActive && 'line-through text-muted-foreground'
+        )}>
+          {chunk.text}
+        </div>
+        <div className="flex items-center space-x-3 mt-2 text-xs text-muted-foreground">
+          <span>
+            {formatTime(chunk.timestamp[0])} - {formatTime(chunk.timestamp[1])}
+          </span>
+          <span>
+            时长: {((chunk.timestamp[1] - chunk.timestamp[0])).toFixed(1)}s
+          </span>
+          {!isActive && (
+            <span className="text-red-500 font-medium">已删除</span>
           )}
-          title={isSelected ? '撤销删除' : '删除此片段'}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        </div>
       </div>
+
+      {/* 播放按钮 */}
+      <button
+        onClick={handlePlayClick}
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-primary/10 rounded transition-opacity"
+        title="跳转到此处"
+      >
+        <Play className="h-4 w-4 text-primary" />
+      </button>
     </div>
   );
 }

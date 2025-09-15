@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { useEditingSession } from '../HistoryPanel/useEditingSession';
-import { formatTime, formatTimeSaved } from '@/utils/segmentUtils';
+import { useChunks, useHistoryDuration } from '@/stores/historyStore';
+import { formatTime } from '@/utils/timeUtils';
 import { 
   Download, 
   FileText, 
@@ -31,7 +31,8 @@ export function ExportPanel({
   onExportSubtitles, 
   onExportVideo 
 }: ExportPanelProps) {
-  const { session } = useEditingSession();
+  const chunks = useChunks();
+  const totalDuration = useHistoryDuration();
   
   const [exportType, setExportType] = useState<'subtitles' | 'video'>('subtitles');
   const [videoOptions, setVideoOptions] = useState<VideoExportOptions>({
@@ -42,23 +43,31 @@ export function ExportPanel({
   
   // 计算导出统计信息
   const exportStats = useMemo(() => {
-    if (!session) return null;
+    if (!chunks || chunks.length === 0) return null;
 
-    const compressionRatio = session.compressionRatio;
+    const activeChunks = chunks.filter(chunk => !chunk.deleted);
+    const deletedChunks = chunks.filter(chunk => chunk.deleted);
+    
+    const originalDuration = chunks.reduce((total, chunk) => 
+      total + (chunk.timestamp[1] - chunk.timestamp[0]), 0);
+    const finalDuration = totalDuration; // 来自 historyStore
+    const deletedDuration = originalDuration - finalDuration;
+    
+    const compressionRatio = originalDuration > 0 ? finalDuration / originalDuration : 0;
     const estimatedSize = compressionRatio * 100; // 假设原文件 100MB
     const sizeSaving = 100 - estimatedSize;
 
     return {
-      originalDuration: formatTime(session.originalDuration),
-      finalDuration: formatTime(session.currentDuration),
-      timeSaved: formatTimeSaved(session.totalDeletedTime),
+      originalDuration: formatTime(originalDuration),
+      finalDuration: formatTime(finalDuration),
+      timeSaved: formatTime(deletedDuration),
       compressionRatio: `${(compressionRatio * 100).toFixed(1)}%`,
       estimatedSize: `~${estimatedSize.toFixed(0)}MB`,
       sizeSaving: `节省 ~${sizeSaving.toFixed(0)}MB`,
-      segmentsCount: session.keptSegments.length,
-      deletedSegments: session.deletedSegments.length,
+      segmentsCount: activeChunks.length,
+      deletedSegments: deletedChunks.length,
     };
-  }, [session]);
+  }, [chunks, totalDuration]);
 
   const handleExportSubtitles = (format: 'srt' | 'json') => {
     onExportSubtitles?.(format);
@@ -68,7 +77,7 @@ export function ExportPanel({
     onExportVideo?.(videoOptions);
   };
 
-  if (!session) {
+  if (!chunks || chunks.length === 0) {
     return (
       <div className={cn('bg-card border rounded-lg p-8 text-center', className)}>
         <Download className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
