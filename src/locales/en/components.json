@@ -1,0 +1,11 @@
+{
+  "fileUpload": {
+    "dragDropText": "Drag video files here or click to select",
+    "clickToSelect": "click to select files",
+    "supportedFormats": "Supported formats:",
+    "maxFileSize": "Max file size:",
+    "selectFile": "Select File",
+    "invalidFileType": "Unsupported file type",
+    "fileTooLarge": "File too large"
+  }
+}

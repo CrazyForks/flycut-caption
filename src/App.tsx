@@ -5,6 +5,8 @@ import { useAppStore } from '@/stores/appStore';
 import { useChunks } from '@/stores/historyStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { useI18n } from '@/hooks/useI18n';
+import { useTranslation } from 'react-i18next';
 import { FileUpload } from '@/components/FileUpload/FileUpload';
 import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import { SubtitleList } from '@/components/SubtitleEditor/SubtitleList';
@@ -13,6 +15,9 @@ import { ExportDialog, type VideoExportOptions } from '@/components/ExportPanel/
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ThemeInitializer } from '@/components/ThemeInitializer';
 import { ToastContainer, MessageCenterButton } from '@/components/MessageCenter';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { SubtitleSettings, defaultSubtitleStyle } from '@/components/SubtitleSettings';
+import type { SubtitleStyle } from '@/components/SubtitleSettings';
 import { 
   useStartVideoProcessing, 
   useUpdateVideoProcessingProgress, 
@@ -42,6 +47,21 @@ function AppContent() {
   
   // 主题管理
   const { theme, resolvedTheme, setTheme } = useThemeStore();
+  
+  // 国际化
+  const { t, ready } = useTranslation();
+  
+  // 如果翻译还没准备好，显示加载状态
+  if (!ready) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
   
   // 初始化主题 - 确保在客户端正确应用
   useEffect(() => {
@@ -95,6 +115,9 @@ function AppContent() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportDialogType, setExportDialogType] = useState<'subtitles' | 'video'>('video');
   
+  // 字幕样式状态
+  const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(defaultSubtitleStyle);
+  
   
   // const availableEngines = UnifiedVideoProcessor.getSupportedEngines();
 
@@ -110,7 +133,7 @@ function AppContent() {
     options?: VideoProcessingOptions
   ) => {
     if (isProcessing) {
-      console.warn('视频处理正在进行中');
+      console.warn(t('processingVideo', { ns: 'app' }));
       return;
     }
 
@@ -120,7 +143,7 @@ function AppContent() {
       setIsProcessing(true);
       
       // 开始视频处理消息
-      messageId = startVideoProcessing('视频处理');
+      messageId = startVideoProcessing(t('videoProcessing', { ns: 'app' }));
       setCurrentProcessingMessageId(messageId);
 
       // 创建处理器（如果不存在）
@@ -181,7 +204,7 @@ function AppContent() {
   const handleExportSubtitles = useCallback(async (format: 'srt' | 'json') => {
     const keptChunks = chunks.filter(chunk => !chunk.deleted);
     if (keptChunks.length === 0) {
-      console.warn('没有可导出的字幕');
+      console.warn(t('noActiveSubtitles', { ns: 'app' }));
       return;
     }
 
@@ -247,7 +270,7 @@ function AppContent() {
   // 开始视频处理
   const handleStartProcessing = useCallback(async (options: VideoProcessingOptions) => {
     if (!videoFile) {
-      console.error('没有视频文件可以处理');
+      console.error(t('noVideoToProcess', { ns: 'app' }));
       return;
     }
 
@@ -260,7 +283,7 @@ function AppContent() {
         segments: videoSegments?.length,
         error 
       });
-      setError(`视频处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      setError(`${t('videoProcessingFailed', { ns: 'app' })}: ${error instanceof Error ? error.message : t('unknownError', { ns: 'messages' })}`);
     }
   }, [videoFile, videoSegments, processVideo, setStage, setError]);
 
@@ -283,8 +306,9 @@ function AppContent() {
       quality: options.quality,
       preserveAudio: true,
       subtitleProcessing: options.subtitleProcessing,
+      subtitleStyle: subtitleStyle, // 传递字幕样式配置
     });
-  }, [handleStartProcessing]);
+  }, [handleStartProcessing, subtitleStyle]);
 
 
 
@@ -297,7 +321,7 @@ function AppContent() {
           <div className="space-y-4">
             {/* 语言选择 */}
             <div>
-              <label className="text-sm font-medium mb-2 block">识别语言</label>
+              <label className="text-sm font-medium mb-2 block">{t('recognitionLanguage', { ns: 'app' })}</label>
               <ASRPanel />
             </div>
           </div>
@@ -305,13 +329,13 @@ function AppContent() {
 
         {/* 字幕编辑器 */}
         {stage === 'edit' && <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="p-4 border-b">
+          <div className="p-4">
             <h3 className="text-sm font-medium flex items-center space-x-2">
               <FileText className="h-4 w-4" />
-              <span>字幕编辑器</span>
+              <span>{t('subtitleEditor', { ns: 'app' })}</span>
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              选择要删除的字幕片段
+              {t('subtitleEditorDescription', { ns: 'app' })}
             </p>
           </div>
           
@@ -337,11 +361,8 @@ function AppContent() {
                   <Upload className="h-16 w-16 text-primary" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold mb-4">上传您的视频文件</h2>
-              <p className="text-muted-foreground text-sm">
-                支持 MP4、WebM、AVI 等格式<br/>
-                开始您的智能字幕裁剪之旅
-              </p>
+              <h2 className="text-2xl font-bold mb-4">{t('uploadTitle', { ns: 'app' })}</h2>
+              <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: t('uploadDescription', { ns: 'app' }) }} />
             </div>
             
             <FileUpload
@@ -374,7 +395,7 @@ function AppContent() {
               {isLoading && (
                 <div className="px-2 py-1 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-600 flex items-center space-x-1">
                   <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600" />
-                  <span>处理中</span>
+                  <span>{t('processing', { ns: 'common' })}</span>
                 </div>
               )}
             </div>
@@ -389,21 +410,60 @@ function AppContent() {
                 videoUrl={videoFile.url}
                 className="w-full h-full"
                 onTimeUpdate={(time) => setCurrentTime(time)}
+                subtitleStyle={subtitleStyle}
+                onSubtitleStyleChange={setSubtitleStyle}
               />
             </div>
           </div>
 
           {/* 波形图和时间线区域 */}
-          <div className="flex-shrink-0 h-32 bg-background/50 p-4">
+          {/* <div className="flex-shrink-0 h-32 bg-background/50 p-4">
             <div className="h-full bg-muted/30 rounded border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
                 <div className="text-xs mb-1">音频波形图</div>
                 <div className="text-xs opacity-60">即将推出</div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
+      </div>
+    );
+  };
+
+  // 渲染右侧字幕设置面板
+  const renderSubtitleSettingsPanel = () => {
+    // 如果没有视频文件，显示占位内容
+    if (!videoFile) {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex-shrink-0 p-4 border-b">
+            <h2 className="text-sm font-semibold">{t('subtitleSettings', { ns: 'app' })}</h2>
+            <p className="text-xs text-muted-foreground mt-1">{t('subtitleSettingsDescription', { ns: 'app' })}</p>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center text-muted-foreground">
+              <div className="text-xs opacity-60">{t('waitingForVideo', { ns: 'app' })}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 有视频文件时显示字幕设置面板
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 p-4 border-b">
+          <h2 className="text-sm font-semibold">{t('app.subtitleSettings')}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t('app.subtitleSettingsDescription')}</p>
+        </div>
+        
+        <div className="flex-1 p-4 overflow-y-auto">
+          <SubtitleSettings
+            style={subtitleStyle}
+            onStyleChange={setSubtitleStyle}
+          />
+        </div>
       </div>
     );
   };
@@ -419,12 +479,15 @@ function AppContent() {
                 <Scissors className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-lg font-bold">FlyCut Caption</h1>
-                <p className="text-xs text-muted-foreground">智能视频字幕裁剪工具</p>
+                <h1 className="text-lg font-bold">{t('title', { ns: 'app' })}</h1>
+                <p className="text-xs text-muted-foreground">{t('subtitle', { ns: 'app' })}</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* 语言切换按钮 */}
+              <LanguageSelector variant="minimal" />
+              
               {/* 主题切换按钮 */}
               <ThemeToggle variant="button" />
               
@@ -440,12 +503,12 @@ function AppContent() {
                     disabled={false}
                   >
                     <Upload className="h-4 w-4 mr-1.5" />
-                    <span className="hidden sm:inline">文件</span>
+                    <span className="hidden sm:inline">{t('fileMenu', { ns: 'app' })}</span>
                   </MenubarTrigger>
                   <MenubarContent align="start" className="min-w-[160px]">
                     <MenubarItem onClick={handleReupload}>
                       <Upload className="h-4 w-4 mr-2" />
-                      重新上传视频
+                      {t('reuploadVideo', { ns: 'app' })}
                     </MenubarItem>
                   </MenubarContent>
                 </MenubarMenu>
@@ -457,12 +520,12 @@ function AppContent() {
                     disabled={!hasActiveChunks}
                   >
                     <FileText className="h-4 w-4 mr-1.5" />
-                    <span className="hidden sm:inline">字幕</span>
+                    <span className="hidden sm:inline">{t('subtitleMenu', { ns: 'app' })}</span>
                   </MenubarTrigger>
                   <MenubarContent align="start" className="min-w-[160px]">
                     <MenubarItem onClick={handleOpenSubtitleExportDialog}>
                       <FileText className="h-4 w-4 mr-2" />
-                      导出字幕
+                      {t('exportSubtitle', { ns: 'app' })}
                     </MenubarItem>
                   </MenubarContent>
                 </MenubarMenu>
@@ -475,13 +538,13 @@ function AppContent() {
                   >
                     <Video className="h-4 w-4 mr-1.5" />
                     <span className="hidden sm:inline">
-                      {isProcessing ? '处理中' : '视频'}
+                      {isProcessing ? t('processing', { ns: 'common' }) : t('videoMenu', { ns: 'app' })}
                     </span>
                   </MenubarTrigger>
                   <MenubarContent align="start" className="min-w-[180px]">
                     <MenubarItem onClick={handleOpenVideoExportDialog}>
                       <Video className="h-4 w-4 mr-2" />
-                      处理并导出视频
+                      {t('processAndExportVideo', { ns: 'app' })}
                     </MenubarItem>
                     <MenubarSeparator />
                     <MenubarItem
@@ -489,7 +552,7 @@ function AppContent() {
                       className="data-[disabled]:opacity-50"
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      查看消息中心下载视频
+                      {t('viewInMessageCenter', { ns: 'app' })}
                     </MenubarItem>
                   </MenubarContent>
                 </MenubarMenu>
@@ -499,16 +562,21 @@ function AppContent() {
         </div>
       </header>
 
-      {/* 主要内容区域 - 左右分栏 */}
+      {/* 主要内容区域 - 三栏布局 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧面板 - 字幕编辑器和配置 */}
-        <div className="w-96 flex-shrink-0 bg-card shadow-sm">
+        <div className="w-80 flex-shrink-0 bg-card shadow-sm">
           {renderLeftPanel()}
         </div>
 
-        {/* 右侧面板 - 视频播放器和波形图 */}
+        {/* 中间面板 - 视频播放器 */}
         <div className="flex-1 flex flex-col bg-muted/10 h-full">
           {renderRightPanel()}
+        </div>
+        
+        {/* 右侧面板 - 字幕设置 */}
+        <div className="w-80 flex-shrink-0 bg-card shadow-sm border-l">
+          {renderSubtitleSettingsPanel()}
         </div>
       </div>
 

@@ -16,9 +16,10 @@ import {
   AlertCircle,
   Settings,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from 'lucide-react';
-import { AdvancedLanguageSelector, LanguageSelector } from '@/components/LanguageSelector';
+import { ASRLanguageSelector } from '@/components/ASR';
 
 interface ASRPanelProps {
   className?: string;
@@ -286,13 +287,17 @@ export function ASRPanel({ className }: ASRPanelProps) {
       {showSettings && (
         <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 语言选择 */}
+            {/* ASR语言选择 */}
             <div className="space-y-2">
-              <AdvancedLanguageSelector
+              <label className="flex items-center space-x-2 text-sm font-medium">
+                <Globe className="h-4 w-4" />
+                <span>识别语言</span>
+              </label>
+              <ASRLanguageSelector
                 language={language}
                 onLanguageChange={handleLanguageChange}
                 disabled={isLoading}
-                placeholder="搜索支持的语言..."
+                placeholder="搜索支持的语音识别语言..."
               />
             </div>
 
@@ -348,15 +353,17 @@ export function ASRPanel({ className }: ASRPanelProps) {
         </div>
       )}
 
-      {/* 快速语言选择 */}
+      {/* 快速ASR语言选择 */}
       {!showSettings && (
         <div className="border rounded-lg p-3 bg-muted/20">
-          <LanguageSelector
+          <div className="flex items-center space-x-2 mb-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">识别语言</span>
+          </div>
+          <ASRLanguageSelector
             language={language}
             onLanguageChange={handleLanguageChange}
             disabled={isLoading}
-            showLabel={true}
-            size="sm"
             className="max-w-xs"
           />
         </div>

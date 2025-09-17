@@ -133,7 +133,7 @@ export function SubtitleList({
   return (
     <div className={cn('flex flex-col space-y-4 h-full', className)}>
       {/* 操作按钮 */}
-      <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-card">
+      <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-card">
         {/* 历史操作按钮组 */}
         <div className="flex items-center space-x-1 pr-2 border-r border-border">
           <button
@@ -198,9 +198,9 @@ export function SubtitleList({
 
       {/* 字幕列表 */}
       <div 
-        className="border flex-1 rounded-lg overflow-hidden"
+        className="flex-1 rounded-lg overflow-hidden"
       >
-        <div className="overflow-y-auto space-y-1 p-2 h-full">
+        <div className="overflow-y-auto space-y-2 p-2 h-full">
           {transcript.chunks.map((chunk, index) => {
             const isActive = !chunk.deleted;
             const isCurrent = currentChunk?.id === chunk.id;

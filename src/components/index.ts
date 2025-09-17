@@ -6,3 +6,4 @@ export * from './ProcessingPanel';
 export * from './ExportPanel';
 export * from './LanguageSelector';
 export * from './ThemeToggle';
+export * from './SubtitleSettings';

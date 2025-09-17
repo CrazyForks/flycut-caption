@@ -1,0 +1,11 @@
+{
+  "fileUpload": {
+    "dragDropText": "拖拽视频文件到这里，或点击选择",
+    "clickToSelect": "点击选择文件",
+    "supportedFormats": "支持的格式：",
+    "maxFileSize": "最大文件大小：",
+    "selectFile": "选择文件",
+    "invalidFileType": "不支持的文件类型",
+    "fileTooLarge": "文件太大"
+  }
+}

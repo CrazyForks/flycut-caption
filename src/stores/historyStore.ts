@@ -47,6 +47,9 @@ interface HistoryActions {
   deleteSelected: (selectedIds: Set<string>) => void;
   restoreSelected: (selectedIds: Set<string>) => void;
   
+  // 编辑字幕文本
+  updateChunkText: (chunkId: string, newText: string) => void;
+  
   // 重置
   reset: () => void;
 }
@@ -343,6 +346,51 @@ export const useHistoryStore = create<HistoryState & HistoryActions>()(
         }
       },
 
+      // 编辑字幕文本
+      updateChunkText: (chunkId, newText) => {
+        const state = get();
+        const newChunks = [...state.chunks];
+        const now = Date.now();
+        
+        const chunkIndex = newChunks.findIndex(c => c.id === chunkId);
+        if (chunkIndex === -1) {
+          console.warn('找不到指定的字幕片段:', chunkId);
+          return;
+        }
+        
+        const chunk = newChunks[chunkIndex];
+        const trimmedText = newText.trim();
+        
+        // 如果文本没有变化，不需要更新
+        if (chunk.text === trimmedText) {
+          return;
+        }
+        
+        const action: UpdateAction = {
+          type: "update",
+          id: chunkId,
+          prev: { text: chunk.text },
+          next: { text: trimmedText }
+        };
+        
+        // 更新chunk文本
+        newChunks[chunkIndex] = { ...chunk, text: trimmedText };
+        
+        // 重新计算衍生状态
+        const derived = computeDerivedState(newChunks);
+        
+        set({
+          chunks: newChunks,
+          undoStack: [...state.undoStack, action],
+          redoStack: [],
+          lastUpdateTime: now,
+          text: derived.text,
+          duration: derived.duration,
+          canUndo: true,
+          canRedo: false,
+        });
+      },
+
       // 重置所有状态
       reset: () => {
         set(initialState);
@@ -367,6 +415,7 @@ export const useRedo = () => useHistoryStore(state => state.redo);
 export const useClearHistory = () => useHistoryStore(state => state.clearHistory);
 export const useDeleteSelected = () => useHistoryStore(state => state.deleteSelected);
 export const useRestoreSelected = () => useHistoryStore(state => state.restoreSelected);
+export const useUpdateChunkText = () => useHistoryStore(state => state.updateChunkText);
 export const useResetHistory = () => useHistoryStore(state => state.reset);
 
 // 获取所有chunks（在组件中使用 useMemo 过滤）

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useState, useRef } from 'react';
 import { useAppStore } from '@/stores/appStore';
+import { useTranslation } from 'react-i18next';
 import { 
   isVideoFile, 
   formatFileSize, 
@@ -20,6 +21,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ className, onFileSelect }: FileUploadProps) {
+  const { t } = useTranslation();
   const setVideoFile = useAppStore((state) => state.setVideoFile);
   const setAppError = useAppStore((state) => state.setError);
   const reset = useAppStore((state) => state.reset);
@@ -51,7 +53,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
     try {
       // 验证文件类型
       if (!validateFileType(file, SUPPORTED_TYPES)) {
-        throw new Error(`不支持的文件类型: ${file.type}`);
+        throw new Error(`${t('fileUpload.invalidFileType', { ns: 'components' })}: ${file.type}`);
       }
 
       // 读取文件为 ArrayBuffer (用于 ASR)
@@ -95,7 +97,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
 
     } catch (err) {
       console.error('文件处理失败:', err);
-      const errorMessage = err instanceof Error ? err.message : '文件处理失败';
+      const errorMessage = err instanceof Error ? err.message : t('fileUploadFailed', { ns: 'messages' });
       setError(errorMessage);
       setAppError(errorMessage);
     } finally {
@@ -187,18 +189,18 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
           {isProcessing ? (
             <>
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
-              <p className="text-sm text-muted-foreground">正在处理文件...</p>
+              <p className="text-sm text-muted-foreground">{t('processingFile', { ns: 'messages' })}</p>
             </>
           ) : (
             <>
               <Upload className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium text-center mb-2">
-                拖拽视频文件到这里，或点击选择
+                {t('fileUpload.dragDropText', { ns: 'components' })}
               </p>
               <p className="text-sm text-muted-foreground text-center">
-                支持 MP4, WebM, AVI, MOV 等视频格式
+                {t('fileUpload.supportedFormats', { ns: 'components' })}
                 <br />
-                以及 MP3, WAV, OGG 等音频格式
+                MP4, WebM, AVI, MOV, MP3, WAV, OGG
               </p>
             </>
           )}
@@ -222,11 +224,11 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
                 </div>
                 
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p>大小: {formatFileSize(uploadedFile.size)}</p>
+                  <p>{t('size', { ns: 'common' })}: {formatFileSize(uploadedFile.size)}</p>
                   {uploadedFile.duration > 0 && (
-                    <p>时长: {Math.floor(uploadedFile.duration / 60)}:{Math.floor(uploadedFile.duration % 60).toString().padStart(2, '0')}</p>
+                    <p>{t('duration', { ns: 'common' })}: {Math.floor(uploadedFile.duration / 60)}:{Math.floor(uploadedFile.duration % 60).toString().padStart(2, '0')}</p>
                   )}
-                  <p>类型: {uploadedFile.type}</p>
+                  <p>{t('format', { ns: 'common' })}: {uploadedFile.type}</p>
                 </div>
                 
                 {error && (
@@ -238,7 +240,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
             <button
               onClick={clearFile}
               className="flex-shrink-0 p-1 hover:bg-muted rounded-md transition-colors"
-              title="移除文件"
+              title={t('delete', { ns: 'common' })}
             >
               <X className="h-4 w-4" />
             </button>
@@ -247,7 +249,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
           {!error && (
             <div className="mt-4 text-center">
               <p className="text-sm text-green-600">
-                ✅ 文件上传成功！可以开始生成字幕了。
+                ✅ {t('fileUploaded', { ns: 'messages' })}
               </p>
             </div>
           )}

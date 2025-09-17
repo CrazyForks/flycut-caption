@@ -4,6 +4,8 @@ import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
 import { useChunks } from '@/stores/historyStore';
+import { SubtitleOverlay } from './SubtitleOverlay';
+import type { SubtitleStyle } from '@/components/SubtitleSettings';
 import { 
   Play, 
   Pause, 
@@ -13,7 +15,8 @@ import {
   VolumeX, 
   Maximize,
   Eye,
-  EyeOff
+  EyeOff,
+  Subtitles
 } from 'lucide-react';
 
 interface EnhancedVideoPlayerProps {
@@ -22,6 +25,8 @@ interface EnhancedVideoPlayerProps {
   onTimeUpdate?: (time: number) => void;
   onPlay?: () => void;
   onPause?: () => void;
+  subtitleStyle?: SubtitleStyle;
+  onSubtitleStyleChange?: (style: SubtitleStyle) => void;
 }
 
 export function EnhancedVideoPlayer({
@@ -29,9 +34,13 @@ export function EnhancedVideoPlayer({
   videoUrl,
   onTimeUpdate,
   onPlay,
-  onPause
+  onPause,
+  subtitleStyle,
+  onSubtitleStyleChange
 }: EnhancedVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
   const chunks = useChunks();
   
   const [isPlaying, setIsPlaying] = useState(false);
@@ -40,6 +49,16 @@ export function EnhancedVideoPlayer({
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [previewMode, setPreviewMode] = useState(true); // 预览模式：跳过删除片段
+  
+  // 拖拽相关状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragTime, setDragTime] = useState(0);
+  const [dragPercentage, setDragPercentage] = useState(0); // 拖拽时的位置百分比
+  const [wasPlayingBeforeDrag, setWasPlayingBeforeDrag] = useState(false);
+  
+  // 字幕相关状态 - 移除本地状态，使用外部传入的
+  // const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(defaultSubtitleStyle);
+  // const [showSubtitleSettings, setShowSubtitleSettings] = useState(false);
   
   // 基于 chunks 数据计算保留的片段
   const keptSegments = useMemo(() => {
@@ -110,7 +129,7 @@ export function EnhancedVideoPlayer({
 
   // 处理视频时间更新
   const handleTimeUpdate = useCallback(() => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || isDragging) return; // 拖拽时忽略 timeupdate 事件
     
     const time = videoRef.current.currentTime;
     setLocalCurrentTime(time);
@@ -137,7 +156,7 @@ export function EnhancedVideoPlayer({
     // 通知外部组件时间更新（使用新时间轴或原始时间轴）
     const notifyTime = previewMode && keptSegments.length > 0 ? newTimelineTime : localCurrentTime;
     onTimeUpdate?.(notifyTime);
-  }, [previewMode, keptSegments, isPlaying, isTimeInKeptSegments, findNextKeptSegment, newTimelineTime, onTimeUpdate, onPause, localCurrentTime]);
+  }, [previewMode, keptSegments, isPlaying, isTimeInKeptSegments, findNextKeptSegment, newTimelineTime, onTimeUpdate, onPause, localCurrentTime, isDragging]);
 
   // 播放/暂停
   const togglePlayPause = useCallback(() => {
@@ -163,8 +182,8 @@ export function EnhancedVideoPlayer({
     // 如果在预览模式且传入的是新时间轴时间，需要转换为原始时间
     if (previewMode && keptSegments.length > 0) {
       // 将新时间轴时间映射回原始时间
-      let remainingTime = time;
-      targetTime = 0;
+      let remainingTime = Math.max(0, time);
+      targetTime = keptSegments[0]?.start || 0; // 默认到第一个片段开始
       
       for (const segment of keptSegments) {
         if (remainingTime <= segment.duration) {
@@ -175,10 +194,9 @@ export function EnhancedVideoPlayer({
         }
       }
       
-      // 如果时间超出了所有保留片段，跳转到最后一个片段的结束
-      if (remainingTime > 0 && keptSegments.length > 0) {
-        const lastSegment = keptSegments[keptSegments.length - 1];
-        targetTime = lastSegment.end;
+      // 确保targetTime不超出视频总长度
+      if (targetTime > duration) {
+        targetTime = duration;
       }
     }
 
@@ -223,6 +241,129 @@ export function EnhancedVideoPlayer({
   const togglePreviewMode = useCallback(() => {
     setPreviewMode(prev => !prev);
   }, []);
+
+  // 拖拽事件处理
+  const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!progressBarRef.current || !videoRef.current) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const targetDuration = previewMode ? newTimelineDuration : duration;
+    const newTime = percentage * targetDuration;
+    
+    // 记录拖拽前的播放状态
+    setWasPlayingBeforeDrag(isPlaying);
+    setIsDragging(true);
+    setDragTime(newTime);
+    setDragPercentage(percentage);
+    
+    // 暂停视频以便实时预览
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+    
+    // 立即设置视频时间
+    let videoTime = newTime;
+    if (previewMode && keptSegments.length > 0) {
+      // 将新时间轴时间映射回原始时间
+      let remainingTime = Math.max(0, newTime);
+      videoTime = keptSegments[0]?.start || 0; // 默认到第一个片段开始
+      
+      for (const segment of keptSegments) {
+        if (remainingTime <= segment.duration) {
+          videoTime = segment.start + remainingTime;
+          break;
+        } else {
+          remainingTime -= segment.duration;
+        }
+      }
+      
+      // 确保videoTime不超出视频总长度
+      if (videoTime > duration) {
+        videoTime = duration;
+      }
+    }
+    
+    videoRef.current.currentTime = videoTime;
+    setLocalCurrentTime(videoTime);
+  }, [previewMode, newTimelineDuration, duration, isPlaying, keptSegments]);
+
+  const handleProgressMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !progressBarRef.current || !videoRef.current) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const moveX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, moveX / rect.width));
+    const targetDuration = previewMode ? newTimelineDuration : duration;
+    const newTime = percentage * targetDuration;
+    
+    setDragTime(newTime);
+    setDragPercentage(percentage);
+    
+    // 拖拽时直接设置视频时间，跳过 seekTo 中的时间转换逻辑
+    let videoTime = newTime;
+    if (previewMode && keptSegments.length > 0) {
+      // 将新时间轴时间映射回原始时间
+      let remainingTime = Math.max(0, newTime);
+      videoTime = keptSegments[0]?.start || 0; // 默认到第一个片段开始
+      
+      for (const segment of keptSegments) {
+        if (remainingTime <= segment.duration) {
+          videoTime = segment.start + remainingTime;
+          break;
+        } else {
+          remainingTime -= segment.duration;
+        }
+      }
+      
+      // 确保videoTime不超出视频总长度
+      if (videoTime > duration) {
+        videoTime = duration;
+      }
+    }
+    
+    videoRef.current.currentTime = videoTime;
+    setLocalCurrentTime(videoTime);
+  }, [isDragging, previewMode, newTimelineDuration, duration, keptSegments]);
+
+  const handleProgressMouseUp = useCallback(() => {
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    
+    // 确保最终时间状态正确
+    if (videoRef.current) {
+      const finalTime = videoRef.current.currentTime;
+      setLocalCurrentTime(finalTime);
+      
+      // 通知外部组件时间更新
+      const notifyTime = previewMode && keptSegments.length > 0 ? 
+        (dragTime || 0) : finalTime;
+      onTimeUpdate?.(notifyTime);
+    }
+    
+    // 如果拖拽前在播放，恢复播放状态
+    if (wasPlayingBeforeDrag && videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+      onPlay?.();
+    }
+  }, [isDragging, wasPlayingBeforeDrag, onPlay, previewMode, keptSegments, dragTime, onTimeUpdate]);
+
+  // 绑定全局拖拽事件
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleProgressMouseMove);
+      document.addEventListener('mouseup', handleProgressMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleProgressMouseMove);
+        document.removeEventListener('mouseup', handleProgressMouseUp);
+      };
+    }
+  }, [isDragging, handleProgressMouseMove, handleProgressMouseUp]);
 
   // 全屏
   const toggleFullscreen = useCallback(() => {
@@ -324,13 +465,26 @@ export function EnhancedVideoPlayer({
   return (
     <div className={cn('bg-card rounded-lg overflow-hidden h-full flex flex-col', className)}>
       {/* 视频区域 */}
-      <div className="relative bg-black flex-1 flex items-center justify-center h-full w-full">
+      <div 
+        ref={videoContainerRef}
+        className="relative bg-background flex-1 flex items-center justify-center overflow-hidden w-full"
+      >
         <video
           ref={videoRef}
           src={videoUrl}
           className="max-h-full max-w-full object-contain"
           onClick={togglePlayPause}
         />
+        
+        {/* 字幕覆盖层 */}
+        {subtitleStyle && (
+          <SubtitleOverlay
+            currentTime={previewMode ? newTimelineTime : localCurrentTime}
+            style={subtitleStyle}
+            onStyleChange={onSubtitleStyleChange || (() => {})}
+            containerRef={videoContainerRef}
+          />
+        )}
         
         {/* 播放覆盖层 */}
         {!isPlaying && (
@@ -357,12 +511,22 @@ export function EnhancedVideoPlayer({
         {/* 进度条 */}
         <div className="space-y-2">
           <div className="relative">
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              ref={progressBarRef}
+              className={cn(
+                "group w-full h-3 bg-muted rounded-full overflow-hidden cursor-pointer select-none",
+                isDragging && "cursor-grabbing"
+              )}
+              onMouseDown={handleProgressMouseDown}
+            >
               {/* 背景进度条 */}
               <div 
-                className="h-full bg-primary/30 transition-all"
+                className={cn(
+                  "h-full bg-primary/30 transition-all",
+                  isDragging && "transition-none"
+                )}
                 style={{ 
-                  width: `${(newTimelineTime / newTimelineDuration) * 100}%` 
+                  width: `${((isDragging ? dragTime : (previewMode ? newTimelineTime : localCurrentTime)) / (previewMode ? newTimelineDuration : duration)) * 100}%` 
                 }}
               />
               
@@ -379,7 +543,7 @@ export function EnhancedVideoPlayer({
                     return (
                       <div
                         key={segment.id}
-                        className="absolute top-0 h-full bg-green-500/60"
+                        className="absolute top-0 h-full bg-green-500/60 pointer-events-none"
                         style={{
                           left: `${(segmentStartInNewTimeline / newTimelineDuration) * 100}%`,
                           width: `${(segment.duration / newTimelineDuration) * 100}%`,
@@ -392,27 +556,52 @@ export function EnhancedVideoPlayer({
               
               {/* 当前进度 */}
               <div 
-                className="h-full bg-primary transition-all"
+                className={cn(
+                  "h-full bg-primary transition-all",
+                  isDragging && "transition-none"
+                )}
                 style={{ 
-                  width: `${(newTimelineTime / newTimelineDuration) * 100}%` 
+                  width: isDragging 
+                    ? `${dragPercentage * 100}%` // 拖拽时直接使用百分比
+                    : `${((previewMode ? newTimelineTime : localCurrentTime) / (previewMode ? newTimelineDuration : duration)) * 100}%`
+                }}
+              />
+              
+              {/* 拖拽手柄 */}
+              <div
+                className={cn(
+                  "absolute top-1/2 w-4 h-4 bg-primary rounded-full -translate-y-1/2 -translate-x-1/2 border-2 border-background shadow-lg transition-all transform pointer-events-none",
+                  isDragging ? "scale-125 transition-none" : "hover:scale-110 opacity-0 group-hover:opacity-100"
+                )}
+                style={{
+                  left: isDragging 
+                    ? `${dragPercentage * 100}%` // 拖拽时直接使用鼠标位置百分比
+                    : `${((previewMode ? newTimelineTime : localCurrentTime) / (previewMode ? newTimelineDuration : duration)) * 100}%`,
+                  opacity: isDragging ? 1 : undefined
                 }}
               />
             </div>
             
-            {/* 可拖拽的进度控制 */}
-            <input
-              type="range"
-              min={0}
-              max={previewMode ? newTimelineDuration : duration}
-              value={previewMode ? newTimelineTime : localCurrentTime}
-              onChange={(e) => seekTo(Number(e.target.value))}
-              className="absolute inset-0 w-full opacity-0 cursor-pointer"
-            />
+            {/* 悬停时显示时间提示 */}
+            {isDragging && (
+              <div
+                className="absolute -top-10 bg-background border rounded px-2 py-1 text-xs font-mono shadow-lg pointer-events-none"
+                style={{
+                  left: `${dragPercentage * 100}%`, // 使用百分比位置
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                {formatTime(dragTime)}
+              </div>
+            )}
           </div>
           
           {/* 时间显示 */}
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{formatTime(previewMode ? newTimelineTime : localCurrentTime)}</span>
+            <span>
+              {formatTime(isDragging ? dragTime : (previewMode ? newTimelineTime : localCurrentTime))}
+              {isDragging && <span className="ml-1 text-primary">●</span>}
+            </span>
             <span>{formatTime(previewMode ? newTimelineDuration : duration)}</span>
           </div>
         </div>

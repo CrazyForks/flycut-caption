@@ -1,6 +1,7 @@
 // 视频处理引擎类型定义
 
 import type { VideoFile, VideoSegment, VideoProcessingProgress } from './video';
+import type { SubtitleStyle } from '@/components/SubtitleSettings';
 
 // 支持的视频处理引擎类型
 export type VideoEngineType = 'webav' | 'ffmpeg' | 'webcodecs';
@@ -15,6 +16,7 @@ export interface VideoProcessingOptions {
   quality: 'high' | 'medium' | 'low';
   preserveAudio: boolean;
   subtitleProcessing?: SubtitleProcessingType; // 字幕处理类型：无字幕、软烧录、硬烧录
+  subtitleStyle?: SubtitleStyle; // 字幕样式配置
   engine?: VideoEngineType; // 指定使用的引擎
 }
 

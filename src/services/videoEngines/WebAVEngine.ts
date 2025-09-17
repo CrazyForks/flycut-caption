@@ -14,6 +14,7 @@ import type {
   EngineCapabilities, 
   VideoProcessingOptions 
 } from '@/types/videoEngine';
+import type { SubtitleStyle } from '@/components/SubtitleSettings';
 
 interface SubtitleStruct {
   start: number; // 开始时间（微秒）
@@ -209,13 +210,7 @@ export class WebAVEngine implements IVideoProcessingEngine {
       if (options.subtitleProcessing && options.subtitleProcessing !== 'none' && subtitleChunks.length > 0) {
         this.reportProgress('processing', 75, '添加字幕到视频...');
         
-        await this.addSoftSubtitles(subtitleChunks, keptSegments);
-        // if (options.subtitleProcessing === 'soft') {
-        //   // 软烧录：使用 EmbedSubtitlesClip
-        // } else {
-        //   // 硬烧录：保持原有逻辑
-        //   await this.addSubtitlesToCombinator(keptSegments, subtitleChunks, options.subtitleProcessing);
-        // }
+        await this.addSoftSubtitles(subtitleChunks, keptSegments, options.subtitleStyle);
         
         this.reportProgress('processing', 78, '字幕添加完成');
       }
@@ -558,7 +553,11 @@ export class WebAVEngine implements IVideoProcessingEngine {
   /**
    * 添加软烧录字幕（使用 EmbedSubtitlesClip）
    */
-  private async addSoftSubtitles(subtitleChunks: SubtitleChunk[], keptSegments: VideoSegment[]): Promise<void> {
+  private async addSoftSubtitles(
+    subtitleChunks: SubtitleChunk[], 
+    keptSegments: VideoSegment[], 
+    subtitleStyle?: SubtitleStyle
+  ): Promise<void> {
     if (!this.combinator || !this.videoClip) {
       return;
     }
@@ -573,24 +572,57 @@ export class WebAVEngine implements IVideoProcessingEngine {
       }
       
       console.log('生成的字幕结构:', subtitleStructs);
+      console.log('使用的字幕样式:', subtitleStyle);
       
-      // 创建字幕嵌入精灵
+      // 使用配置的字幕样式或默认样式
+      const effectiveStyle = subtitleStyle || {
+        fontSize: 48,
+        fontFamily: 'Arial, sans-serif',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        color: '#FFFFFF',
+        backgroundColor: '#000000',
+        borderColor: '#000000',
+        shadowColor: '#000000',
+        textAlign: 'center',
+        lineHeight: 1.2,
+        letterSpacing: 0,
+        borderWidth: 3,
+        shadowOffsetX: 2,
+        shadowOffsetY: 2,
+        shadowBlur: 4,
+        backgroundOpacity: 0,
+        backgroundRadius: 4,
+        backgroundPadding: 8,
+        bottomOffset: 60,
+        visible: true,
+      } as SubtitleStyle;
+      
+      // 创建字幕嵌入精灵 - 使用配置的样式
       const subtitleSprite = new OffscreenSprite(
         new EmbedSubtitlesClip(subtitleStructs, {
           videoWidth: this.videoClip.meta.width,
           videoHeight: this.videoClip.meta.height,
-          fontSize: 48,
-          fontFamily: 'Arial, sans-serif',
-          strokeStyle: '#000',
-          lineWidth: 3,
+          fontSize: effectiveStyle.fontSize,
+          fontFamily: effectiveStyle.fontFamily,
+          fontWeight: effectiveStyle.fontWeight,
+          fontStyle: effectiveStyle.fontStyle,
+          color: effectiveStyle.color,
+          textBgColor: effectiveStyle.backgroundOpacity > 0 
+            ? `${effectiveStyle.backgroundColor}${Math.round(effectiveStyle.backgroundOpacity * 255).toString(16).padStart(2, '0')}`
+            : undefined,
+          strokeStyle: effectiveStyle.borderWidth > 0 ? effectiveStyle.borderColor : undefined,
+          lineWidth: effectiveStyle.borderWidth,
           lineJoin: 'round',
           lineCap: 'round',
-          textShadow: {
-            offsetX: 2,
-            offsetY: 2,
-            blur: 4,
-            color: 'rgba(0,0,0,0.8)',
-          },
+          letterSpacing: effectiveStyle.letterSpacing.toString(),
+          bottomOffset: effectiveStyle.bottomOffset,
+          textShadow: effectiveStyle.shadowBlur > 0 ? {
+            offsetX: effectiveStyle.shadowOffsetX,
+            offsetY: effectiveStyle.shadowOffsetY,
+            blur: effectiveStyle.shadowBlur,
+            color: effectiveStyle.shadowColor,
+          } : undefined,
         })
       );
       
