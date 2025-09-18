@@ -453,12 +453,7 @@ function AppContent() {
     // 有视频文件时显示字幕设置面板
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-shrink-0 p-4 border-b">
-          <h2 className="text-sm font-semibold">{t('app.subtitleSettings')}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{t('app.subtitleSettingsDescription')}</p>
-        </div>
-        
-        <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           <SubtitleSettings
             style={subtitleStyle}
             onStyleChange={setSubtitleStyle}
@@ -562,7 +557,7 @@ function AppContent() {
         </div>
       </header>
 
-      {/* 主要内容区域 - 三栏布局 */}
+      {/* 主要内容区域 - 动态布局 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧面板 - 字幕编辑器和配置 */}
         <div className="w-80 flex-shrink-0 bg-card shadow-sm">
@@ -573,11 +568,13 @@ function AppContent() {
         <div className="flex-1 flex flex-col bg-muted/10 h-full">
           {renderRightPanel()}
         </div>
-        
-        {/* 右侧面板 - 字幕设置 */}
-        <div className="w-80 flex-shrink-0 bg-card shadow-sm border-l">
-          {renderSubtitleSettingsPanel()}
-        </div>
+
+        {/* 右侧面板 - 字幕设置 (仅在有字幕时显示) */}
+        {hasActiveChunks && (
+          <div className="w-80 flex-shrink-0 bg-card shadow-sm">
+            {renderSubtitleSettingsPanel()}
+          </div>
+        )}
       </div>
 
       {/* 导出配置对话框 */}

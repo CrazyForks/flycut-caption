@@ -1,22 +1,22 @@
 // 增强的视频播放器 - 支持区间播放和预览
 
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { useSize } from 'ahooks';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
 import { useChunks } from '@/stores/historyStore';
 import { SubtitleOverlay } from './SubtitleOverlay';
 import type { SubtitleStyle } from '@/components/SubtitleSettings';
-import { 
-  Play, 
-  Pause, 
-  SkipBack, 
-  SkipForward, 
-  Volume2, 
-  VolumeX, 
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
   Maximize,
   Eye,
-  EyeOff,
-  Subtitles
+  EyeOff
 } from 'lucide-react';
 
 interface EnhancedVideoPlayerProps {
@@ -42,6 +42,9 @@ export function EnhancedVideoPlayer({
   const progressBarRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const chunks = useChunks();
+
+  // 获取视频容器尺寸
+  const containerSize = useSize(videoContainerRef);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [localCurrentTime, setLocalCurrentTime] = useState(0);
@@ -55,6 +58,9 @@ export function EnhancedVideoPlayer({
   const [dragTime, setDragTime] = useState(0);
   const [dragPercentage, setDragPercentage] = useState(0); // 拖拽时的位置百分比
   const [wasPlayingBeforeDrag, setWasPlayingBeforeDrag] = useState(false);
+
+  // 视频尺寸状态
+  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
   
   // 字幕相关状态 - 移除本地状态，使用外部传入的
   // const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(defaultSubtitleStyle);
@@ -383,6 +389,10 @@ export function EnhancedVideoPlayer({
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
+      setVideoDimensions({
+        width: video.videoWidth,
+        height: video.videoHeight
+      });
     };
 
     const handlePlay = () => {
@@ -477,25 +487,17 @@ export function EnhancedVideoPlayer({
         />
         
         {/* 字幕覆盖层 */}
-        {subtitleStyle && (
+        {subtitleStyle && containerSize && (
           <SubtitleOverlay
             currentTime={previewMode ? newTimelineTime : localCurrentTime}
             style={subtitleStyle}
             onStyleChange={onSubtitleStyleChange || (() => {})}
-            containerRef={videoContainerRef}
+            containerDimensions={{
+              width: containerSize.width || 0,
+              height: containerSize.height || 0
+            }}
+            videoDimensions={videoDimensions}
           />
-        )}
-        
-        {/* 播放覆盖层 */}
-        {!isPlaying && (
-          <div 
-            className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer"
-            onClick={togglePlayPause}
-          >
-            <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Play className="w-8 h-8 text-white ml-1" />
-            </div>
-          </div>
         )}
 
         {/* 预览模式指示器 */}
