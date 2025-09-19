@@ -1,6 +1,6 @@
 // 增强的视频播放器 - 支持区间播放和预览
 
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { useSize } from 'ahooks';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/utils/timeUtils';
@@ -29,7 +29,11 @@ interface EnhancedVideoPlayerProps {
   onSubtitleStyleChange?: (style: SubtitleStyle) => void;
 }
 
-export function EnhancedVideoPlayer({
+export interface EnhancedVideoPlayerRef {
+  seekTo: (time: number) => void;
+}
+
+export const EnhancedVideoPlayer = forwardRef<EnhancedVideoPlayerRef, EnhancedVideoPlayerProps>(({
   className,
   videoUrl,
   onTimeUpdate,
@@ -37,7 +41,7 @@ export function EnhancedVideoPlayer({
   onPause,
   subtitleStyle,
   onSubtitleStyleChange
-}: EnhancedVideoPlayerProps) {
+}, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -45,14 +49,14 @@ export function EnhancedVideoPlayer({
 
   // 获取视频容器尺寸
   const containerSize = useSize(videoContainerRef);
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [localCurrentTime, setLocalCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [previewMode, setPreviewMode] = useState(true); // 预览模式：跳过删除片段
-  
+
   // 拖拽相关状态
   const [isDragging, setIsDragging] = useState(false);
   const [dragTime, setDragTime] = useState(0);
@@ -61,6 +65,28 @@ export function EnhancedVideoPlayer({
 
   // 视频尺寸状态
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
+
+  // 计算视频在容器中的实际显示尺寸（考虑 object-contain）
+  const actualVideoDisplaySize = useMemo(() => {
+    if (!containerSize?.width || !containerSize?.height || !videoDimensions.width || !videoDimensions.height) {
+      return { width: 0, height: 0 };
+    }
+
+    const containerAspectRatio = containerSize.width / containerSize.height;
+    const videoAspectRatio = videoDimensions.width / videoDimensions.height;
+
+    if (videoAspectRatio > containerAspectRatio) {
+      // 视频更宽，以容器宽度为准
+      const displayWidth = containerSize.width;
+      const displayHeight = displayWidth / videoAspectRatio;
+      return { width: displayWidth, height: displayHeight };
+    } else {
+      // 视频更高或比例相同，以容器高度为准
+      const displayHeight = containerSize.height;
+      const displayWidth = displayHeight * videoAspectRatio;
+      return { width: displayWidth, height: displayHeight };
+    }
+  }, [containerSize, videoDimensions]);
   
   // 字幕相关状态 - 移除本地状态，使用外部传入的
   // const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(defaultSubtitleStyle);
@@ -247,6 +273,11 @@ export function EnhancedVideoPlayer({
   const togglePreviewMode = useCallback(() => {
     setPreviewMode(prev => !prev);
   }, []);
+
+  // 暴露 seekTo 方法给外部组件
+  useImperativeHandle(ref, () => ({
+    seekTo
+  }), [seekTo]);
 
   // 拖拽事件处理
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -487,14 +518,14 @@ export function EnhancedVideoPlayer({
         />
         
         {/* 字幕覆盖层 */}
-        {subtitleStyle && containerSize && (
+        {subtitleStyle && actualVideoDisplaySize.width > 0 && actualVideoDisplaySize.height > 0 && (
           <SubtitleOverlay
             currentTime={previewMode ? newTimelineTime : localCurrentTime}
             style={subtitleStyle}
             onStyleChange={onSubtitleStyleChange || (() => {})}
             containerDimensions={{
-              width: containerSize.width || 0,
-              height: containerSize.height || 0
+              width: actualVideoDisplaySize.width,
+              height: actualVideoDisplaySize.height
             }}
             videoDimensions={videoDimensions}
           />
@@ -696,4 +727,6 @@ export function EnhancedVideoPlayer({
       </div>
     </div>
   );
-}
+});
+
+EnhancedVideoPlayer.displayName = 'EnhancedVideoPlayer';

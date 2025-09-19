@@ -9,6 +9,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { useTranslation } from 'react-i18next';
 import { FileUpload } from '@/components/FileUpload/FileUpload';
 import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
+import type { EnhancedVideoPlayerRef } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import { SubtitleList } from '@/components/SubtitleEditor/SubtitleList';
 import { ASRPanel } from '@/components/ProcessingPanel/ASRPanel';
 import { ExportDialog, type VideoExportOptions } from '@/components/ExportPanel/ExportDialog';
@@ -117,6 +118,9 @@ function AppContent() {
   
   // 字幕样式状态
   const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(defaultSubtitleStyle);
+
+  // 视频播放器引用
+  const videoPlayerRef = useRef<EnhancedVideoPlayerRef>(null);
   
   
   // const availableEngines = UnifiedVideoProcessor.getSupportedEngines();
@@ -340,7 +344,7 @@ function AppContent() {
           </div>
           
           <div className="flex-1 overflow-hidden">
-            <SubtitleList />
+            <SubtitleList videoPlayerRef={videoPlayerRef} />
           </div>
         </div>}
 
@@ -406,7 +410,8 @@ function AppContent() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 bg-black/5 flex items-center justify-center p-6 overflow-hidden">
             <div className="w-full h-full max-w-4xl">
-              <EnhancedVideoPlayer 
+              <EnhancedVideoPlayer
+                ref={videoPlayerRef}
                 videoUrl={videoFile.url}
                 className="w-full h-full"
                 onTimeUpdate={(time) => setCurrentTime(time)}

@@ -116,67 +116,72 @@ export function SubtitleItem({
         className="mt-1 rounded"
       />
 
-      {/* 序号和时间 */}
-      <div className="flex-shrink-0 text-xs text-muted-foreground w-16">
-        <div className="font-mono">#{index + 1}</div>
-        <div className="flex items-center space-x-1 mt-1">
-          <Clock className="h-3 w-3" />
-          <span>{formatTime(chunk.timestamp[0])}</span>
+      <div className="flex flex-col space-y-1">
+        
+        {/* 序号和时间 */}
+        <div className="flex-shrink-0 text-xs text-muted-foreground flex gap-2">
+          <div className="font-mono">#{index + 1}</div>
+          <div className="flex items-center space-x-1">
+            <Clock className="h-3 w-3" />
+            <span>{formatTime(chunk.timestamp[0])}</span>
+          </div>
         </div>
+
+        {/* 字幕内容 */}
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="space-y-2">
+              <textarea
+                ref={textareaRef}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onClick={handleTextareaClick}
+                className="w-full text-sm leading-relaxed border rounded px-2 py-1 min-h-[3rem] resize-y focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="输入字幕文本..."
+              />
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={handleSaveEdit}
+                  className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
+                  title="保存 (Ctrl+Enter)"
+                >
+                  <Save className="h-3 w-3" />
+                  <span>保存</span>
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
+                  title="取消 (Esc)"
+                >
+                  <X className="h-3 w-3" />
+                  <span>取消</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={cn(
+              'text-sm leading-relaxed text-primary',
+              !isActive && 'line-through text-muted-foreground'
+            )}>
+              {chunk.text}
+            </div>
+          )}
+          <div className="flex items-center space-x-3 mt-2 text-xs text-muted-foreground">
+            <span>
+              {formatTime(chunk.timestamp[0])} - {formatTime(chunk.timestamp[1])}
+            </span>
+            <span>
+              时长: {((chunk.timestamp[1] - chunk.timestamp[0])).toFixed(1)}s
+            </span>
+            {!isActive && (
+              <span className="text-red-500 font-medium">已删除</span>
+            )}
+          </div>
+        </div>
+        
       </div>
 
-      {/* 字幕内容 */}
-      <div className="flex-1 min-w-0">
-        {isEditing ? (
-          <div className="space-y-2">
-            <textarea
-              ref={textareaRef}
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onClick={handleTextareaClick}
-              className="w-full text-sm leading-relaxed border rounded px-2 py-1 min-h-[3rem] resize-y focus:outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="输入字幕文本..."
-            />
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={handleSaveEdit}
-                className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-                title="保存 (Ctrl+Enter)"
-              >
-                <Save className="h-3 w-3" />
-                <span>保存</span>
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors"
-                title="取消 (Esc)"
-              >
-                <X className="h-3 w-3" />
-                <span>取消</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className={cn(
-            'text-sm leading-relaxed text-primary',
-            !isActive && 'line-through text-muted-foreground'
-          )}>
-            {chunk.text}
-          </div>
-        )}
-        <div className="flex items-center space-x-3 mt-2 text-xs text-muted-foreground">
-          <span>
-            {formatTime(chunk.timestamp[0])} - {formatTime(chunk.timestamp[1])}
-          </span>
-          <span>
-            时长: {((chunk.timestamp[1] - chunk.timestamp[0])).toFixed(1)}s
-          </span>
-          {!isActive && (
-            <span className="text-red-500 font-medium">已删除</span>
-          )}
-        </div>
-      </div>
 
       {/* 操作按钮 */}
       <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">

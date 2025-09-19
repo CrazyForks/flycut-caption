@@ -1,12 +1,13 @@
 // 字幕列表组件
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { useHistoryStore, useChunks, useHistoryText, useHistoryLanguage, useHistoryDuration, useCanUndo, useCanRedo, useUndo, useRedo } from '@/stores/historyStore';
 import { useAppStore } from '@/stores/appStore';
 import { formatTime, isTimeInRange } from '@/utils/timeUtils';
 import { FileText, Trash2, RotateCcw, Check, Undo, Redo } from 'lucide-react';
 import { SubtitleItem } from './SubtitleItem';
+import type { EnhancedVideoPlayerRef } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 
 interface SubtitleListProps {
   className?: string;
@@ -14,10 +15,12 @@ interface SubtitleListProps {
   isPlaying?: boolean;
   onSeek?: (time: number) => void;
   onPlayPause?: () => void;
+  videoPlayerRef?: RefObject<EnhancedVideoPlayerRef>;
 }
 
-export function SubtitleList({ 
-  className
+export function SubtitleList({
+  className,
+  videoPlayerRef
 }: SubtitleListProps) {
   const chunks = useChunks();
   const text = useHistoryText();
@@ -44,12 +47,18 @@ export function SubtitleList({
     [chunks]
   );
   const currentTime = useAppStore(state => state.currentTime);
-  const setCurrentTime = useAppStore(state => state.setCurrentTime);
   const deleteSelected = useHistoryStore(state => state.deleteSelected);
   const restoreSelected = useHistoryStore(state => state.restoreSelected);
   // const toggleDeleted = useHistoryStore(state => state.toggleDeleted);
   
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 创建 seekTo 函数，使用 videoPlayerRef
+  const seekTo = (time: number) => {
+    if (videoPlayerRef?.current) {
+      videoPlayerRef.current.seekTo(time);
+    }
+  };
 
   // 获取当前高亮的字幕片段
   const currentChunk = useMemo(() => {
@@ -215,7 +224,7 @@ export function SubtitleList({
                 isCurrent={isCurrent}
                 isSelected={isSelected}
                 onToggleSelection={handleToggleSelection}
-                onSeekTo={setCurrentTime}
+                onSeekTo={seekTo}
               />
             );
           })}

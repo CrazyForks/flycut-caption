@@ -29,7 +29,8 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_console_messages",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(pnpm typecheck:*)"
     ],
     "deny": [],
     "ask": [],

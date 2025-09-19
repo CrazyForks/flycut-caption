@@ -9,14 +9,15 @@ import {
   AlignRight,
   Eye,
   EyeOff,
-  RotateCcw
+  RotateCcw,
+  Bold,
+  Italic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface SubtitleStyle {
@@ -214,9 +215,7 @@ export function SubtitleSettings({
                 value={style.fontSize}
                 onChange={(e) => {
                   const value = Number(e.target.value);
-                  if (value >= 8 && value <= 100) {
-                    updateStyle({ fontSize: value });
-                  }
+                  updateStyle({ fontSize: value });
                 }}
                 className="col-span-2"
                 placeholder="字体大小"
@@ -243,26 +242,29 @@ export function SubtitleSettings({
               </Select>
             </div>
 
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="fontBold"
-                  checked={style.fontWeight === 'bold'}
-                  onCheckedChange={(checked) => updateStyle({
-                    fontWeight: checked ? 'bold' : 'normal'
-                  })}
-                />
-                <Label htmlFor="fontBold" className="text-sm">加粗</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="fontItalic"
-                  checked={style.fontStyle === 'italic'}
-                  onCheckedChange={(checked) => updateStyle({
-                    fontStyle: checked ? 'italic' : 'normal'
-                  })}
-                />
-                <Label htmlFor="fontItalic" className="text-sm">斜体</Label>
+            <div className="grid grid-cols-4 items-center gap-2">
+              <Label className="text-sm">样式</Label>
+              <div className="col-span-3">
+                <ToggleGroup
+                  type="multiple"
+                  value={[
+                    ...(style.fontWeight === 'bold' ? ['bold'] : []),
+                    ...(style.fontStyle === 'italic' ? ['italic'] : [])
+                  ]}
+                  onValueChange={(values) => {
+                    updateStyle({
+                      fontWeight: values.includes('bold') ? 'bold' : 'normal',
+                      fontStyle: values.includes('italic') ? 'italic' : 'normal'
+                    });
+                  }}
+                >
+                  <ToggleGroupItem value="bold" aria-label="加粗">
+                    <Bold className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="italic" aria-label="斜体">
+                    <Italic className="w-4 h-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
             </div>
           </div>
@@ -356,17 +358,23 @@ export function SubtitleSettings({
         <div>
           <Label className="text-sm font-medium mb-3 block">位置设置</Label>
           <div className="grid grid-cols-4 items-center gap-2">
-            <Label className="text-sm">底部距离</Label>
-            <div className="col-span-2">
-              <Slider
-                value={[style.bottomOffset]}
-                onValueChange={([value]) => updateStyle({ bottomOffset: value })}
-                min={20}
-                max={200}
-                step={1}
-              />
-            </div>
-            <span className="text-sm text-muted-foreground text-right">{style.bottomOffset}px</span>
+            <Label htmlFor="bottomOffset" className="text-sm">底部距离</Label>
+            <Input
+              id="bottomOffset"
+              type="number"
+              min="20"
+              max="200"
+              value={style.bottomOffset}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (value >= 20 && value <= 200) {
+                  updateStyle({ bottomOffset: value });
+                }
+              }}
+              className="col-span-2"
+              placeholder="底部距离"
+            />
+            <span className="text-sm text-muted-foreground">px</span>
           </div>
         </div>
 

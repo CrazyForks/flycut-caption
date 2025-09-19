@@ -23,7 +23,7 @@ const PER_DEVICE_CONFIG = {
  * ASR 管道单例模式 - 句子级别时间戳版本
  */
 class PipelineSingleton {
-  static model_id = 'onnx-community/whisper-base';
+  static model_id = 'onnx-community/whisper-small';
   static instance: Awaited<ReturnType<typeof pipeline>> | null = null;
 
   static async getInstance(progress_callback?: (progress: unknown) => void, device: 'webgpu' | 'wasm' = 'webgpu') {

@@ -382,7 +382,7 @@ export function SubtitleOverlay({
       {/* Canvas 字幕渲染 - 完全参考 WebAV EmbedSubtitlesClip 的实现方式 */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 pointer-events-auto"
+        className="absolute top-[50%] right-0 pointer-events-auto left-[50%] -translate-x-1/2 -translate-y-1/2"
         style={{
           cursor: isDragging ? 'ns-resize' : currentSubtitle ? 'ns-resize' : 'default',
           opacity: isDragging ? 0.8 : 1,

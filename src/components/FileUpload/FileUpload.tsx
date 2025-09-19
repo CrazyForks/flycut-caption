@@ -12,7 +12,7 @@ import {
 } from '@/utils/fileUtils';
 import { readFileAsArrayBuffer } from '@/utils/fileUtils';
 import type { VideoFile } from '@/types/video';
-import { Upload, File, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle2, AlertCircle, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
@@ -151,12 +151,73 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
     setUploadedFile(null);
     setError(null);
     reset();
-    
+
     // 清空文件输入
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   }, [reset]);
+
+  // 处理示例视频
+  const handleDemoVideo = useCallback(async () => {
+    setError(null);
+    setIsProcessing(true);
+
+    try {
+      const demoUrl = "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/whisper-timestamps-demo.mp4";
+
+      // 获取远程视频文件
+      const response = await fetch(demoUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch demo video');
+      }
+
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      // 创建 File 对象，兼容性处理
+      let file: File;
+      try {
+        file = new File([blob], 'whisper-timestamps-demo.mp4', { type: 'video/mp4' });
+      } catch (e) {
+        // 如果 File 构造函数不可用，使用 Blob 并添加必要属性
+        const fileBlob = blob as any;
+        fileBlob.name = 'whisper-timestamps-demo.mp4';
+        fileBlob.lastModified = Date.now();
+        file = fileBlob as File;
+      }
+
+      // 获取视频信息
+      const videoInfo = await getVideoInfo(file);
+
+      const videoFile: VideoFile = {
+        file,
+        url: createVideoURL(file),
+        duration: videoInfo.duration,
+        size: file.size,
+        type: file.type,
+        name: file.name,
+      };
+
+      setUploadedFile(videoFile);
+
+      // 更新应用状态
+      setVideoFile(videoFile);
+
+      // 通知父组件
+      if (onFileSelect) {
+        onFileSelect(videoFile, arrayBuffer);
+      }
+
+    } catch (err) {
+      console.error('Demo video loading failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load demo video';
+      setError(errorMessage);
+      setAppError(errorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [setVideoFile, setAppError, onFileSelect]);
 
   return (
     <div className={cn('w-full', className)}>
@@ -197,11 +258,30 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
               <p className="text-lg font-medium text-center mb-2">
                 {t('fileUpload.dragDropText', { ns: 'components' })}
               </p>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-muted-foreground text-center mb-6">
                 {t('fileUpload.supportedFormats', { ns: 'components' })}
                 <br />
                 MP4, WebM, AVI, MOV, MP3, WAV, OGG
               </p>
+
+              {/* 示例视频按钮 */}
+              <div className="flex items-center space-x-4">
+                <div className="flex-1 h-px bg-border"></div>
+                <span className="text-xs text-muted-foreground">或</span>
+                <div className="flex-1 h-px bg-border"></div>
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDemoVideo();
+                }}
+                disabled={isProcessing}
+                className="mt-4 inline-flex items-center space-x-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-md hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Play className="h-4 w-4" />
+                <span>使用示例视频</span>
+              </button>
             </>
           )}
         </div>
