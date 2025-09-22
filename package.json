@@ -1,13 +1,65 @@
 {
-  "name": "fly-cut-caption",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@flycut/caption-react",
+  "private": false,
+  "version": "1.0.0",
   "type": "module",
+  "description": "FlyCut Caption - AI-powered video subtitle editing React component with complete editing suite",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./styles": "./dist/caption-react.css"
+  },
+  "keywords": [
+    "react",
+    "video",
+    "subtitle",
+    "caption",
+    "editor",
+    "ai",
+    "asr",
+    "whisper",
+    "flycut",
+    "video-editing",
+    "speech-recognition"
+  ],
+  "author": "FlyCut Team",
+  "license": "MIT",
+  "homepage": "https://github.com/your-username/fly-cut-caption",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/fly-cut-caption.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/fly-cut-caption/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "vite build --mode library",
+    "build:demo": "vite build --mode demo",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run lint && npm run build:lib",
+    "publish:npm": "npm publish"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-i18next": ">=15.0.0",
+    "i18next": ">=25.0.0",
+    "i18next-browser-languagedetector": ">=8.0.0",
+    "zustand": ">=5.0.0"
   },
   "dependencies": {
     "@huggingface/transformers": "3.7.1",
@@ -32,8 +84,6 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "lucide-react": "^0.542.0",
     "next-themes": "^0.4.6",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
     "react-i18next": "^15.7.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
@@ -51,9 +101,12 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "vite-plugin-dts": "^4.5.4"
   }
 }

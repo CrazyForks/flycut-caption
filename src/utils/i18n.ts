@@ -52,8 +52,6 @@ i18n
       caches: ['localStorage'],
       // localStorage 键名
       lookupLocalStorage: 'i18nextLng',
-      // 检查所有回退语言
-      checkWhitelist: true,
       // 转换函数
       convertDetectedLanguage: (lng: string) => {
         // 将所有中文变体转换为 zh

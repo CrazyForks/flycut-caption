@@ -178,7 +178,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
       // 创建 File 对象，兼容性处理
       let file: File;
       try {
-        file = new File([blob], 'whisper-timestamps-demo.mp4', { type: 'video/mp4' });
+        file = new window.File([blob], 'whisper-timestamps-demo.mp4', { type: 'video/mp4' });
       } catch (e) {
         // 如果 File 构造函数不可用，使用 Blob 并添加必要属性
         const fileBlob = blob as any;

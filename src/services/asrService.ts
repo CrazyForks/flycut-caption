@@ -3,6 +3,7 @@
 
 import type { ASRProgress, SubtitleTranscript } from '../types/subtitle';
 import { processAudioForASR, hasWebGPU } from '../utils/audioUtils';
+import asrWorker from '../workers/asrWorker.ts?worker&inline'
 
 export class ASRService {
   private worker: Worker | null = null;
@@ -36,10 +37,7 @@ export class ASRService {
     }
 
     console.log('ASR创建新Worker');
-    this.worker = new Worker(
-      new URL('../workers/asrWorker.ts', import.meta.url),
-      { type: 'module' }
-    );
+    this.worker = new asrWorker()
 
     this.worker.onmessage = (e) => {
       console.log('ASR Worker消息接收:', e.data);

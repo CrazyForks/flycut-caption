@@ -1,6 +1,6 @@
 // 字幕列表组件
 
-import { useMemo, useState, RefObject } from 'react';
+import { useMemo, useState, type RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { useHistoryStore, useChunks, useHistoryText, useHistoryLanguage, useHistoryDuration, useCanUndo, useCanRedo, useUndo, useRedo } from '@/stores/historyStore';
 import { useAppStore } from '@/stores/appStore';

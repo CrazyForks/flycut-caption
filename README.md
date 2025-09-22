@@ -1,262 +1,224 @@
-# FlyCut Caption - Intelligent Video Subtitle Trimming Tool
+# @flycut/caption-react
 
-<div align="center">
+🎥 **FlyCut Caption** - A complete video subtitle editing React component with AI-powered speech recognition and visual editing capabilities.
 
-![FlyCut Caption](screenshots/complete-subtitle-editing-interface.png)
-
-A powerful AI-driven video subtitle editing tool focused on intelligent subtitle generation, editing, and video trimming.
-
-[English](README.md) | [中文](README.zh.md)
-
-</div>
+[![npm version](https://img.shields.io/npm/v/@flycut/caption-react.svg)](https://www.npmjs.com/package/@flycut/caption-react)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
 
 ## ✨ Features
 
-### 🎯 Core Functionality
-- **🎤 Intelligent Speech Recognition**: High-precision speech-to-text based on Whisper model, supporting multiple languages
-- **✂️ Visual Subtitle Editing**: Intuitive subtitle segment selection and deletion interface
-- **🎬 Real-time Video Preview**: Video player synchronized with subtitles, supporting interval playback
-- **📤 Multi-format Export**: Support for SRT, JSON subtitle formats and video file export
-- **🎨 Subtitle Style Customization**: Custom subtitle fonts, colors, positions, and more
-- **🌐 Internationalization**: Support for Chinese and English interface switching
+- 🤖 **AI-Powered Speech Recognition** - Automatic subtitle generation using Whisper model
+- ✂️ **Visual Subtitle Editing** - Interactive timeline-based subtitle editing
+- 🎨 **Customizable Styling** - Flexible subtitle appearance configuration
+- 🎬 **Video Processing** - Built-in video cutting and processing capabilities
+- 🌐 **Multi-language Support** - i18n support for Chinese and English
+- 🎭 **Theme Support** - Light/dark mode with system preference detection
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile devices
+- 🚀 **TypeScript Ready** - Full TypeScript support with type definitions
 
-### 🔧 Technical Features
-- **⚡ Modern Tech Stack**: React 19 + TypeScript + Vite + Tailwind CSS
-- **🧠 Local AI Processing**: Using Hugging Face Transformers.js to run AI models locally in browser
-- **🎯 Web Workers**: ASR processing runs in background threads without blocking main UI
-- **📱 Responsive Design**: Modern interface adapted to different screen sizes
-- **🎪 Component Architecture**: Modular design, easy to maintain and extend
+## 📦 Installation
+
+```bash
+npm install @flycut/caption-react
+# or
+yarn add @flycut/caption-react
+# or
+pnpm add @flycut/caption-react
+```
 
 ## 🚀 Quick Start
 
+```tsx
+import React from 'react'
+import { FlyCutCaption } from '@flycut/caption-react'
+import '@flycut/caption-react/styles'
+
+function App() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <FlyCutCaption
+        config={{
+          theme: 'auto',
+          language: 'zh-CN',
+          asrLanguage: 'auto',
+          enableDragDrop: true,
+          enableExport: true,
+          enableVideoProcessing: true,
+          maxFileSize: 500,
+          supportedFormats: ['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']
+        }}
+        onReady={() => console.log('FlyCut Caption is ready')}
+        onFileSelected={(file) => console.log('File selected:', file.name)}
+        onSubtitleGenerated={(subtitles) => console.log('Subtitles generated:', subtitles.length)}
+        onSubtitleChanged={(subtitles) => console.log('Subtitles changed:', subtitles.length)}
+        onVideoProcessed={(blob, filename) => {
+          // Handle processed video
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = filename
+          a.click()
+        }}
+        onExportComplete={(blob, filename) => {
+          console.log('Export complete:', filename)
+        }}
+        onError={(error) => console.error('Error:', error)}
+        onProgress={(stage, progress) => console.log(\`\${stage}: \${progress}%\`)}
+      />
+    </div>
+  )
+}
+```
+
+## 📖 API Reference
+
+### FlyCutCaptionProps
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `className` | `string` | `undefined` | Custom CSS class name |
+| `style` | `CSSProperties` | `undefined` | Custom inline styles |
+| `config` | `FlyCutCaptionConfig` | `defaultConfig` | Component configuration |
+| `onReady` | `() => void` | `undefined` | Called when component is ready |
+| `onFileSelected` | `(file: File) => void` | `undefined` | Called when a file is selected |
+| `onSubtitleGenerated` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are generated |
+| `onSubtitleChanged` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are changed |
+| `onVideoProcessed` | `(blob: Blob, filename: string) => void` | `undefined` | Called when video processing is complete |
+| `onExportComplete` | `(blob: Blob, filename: string) => void` | `undefined` | Called when export is complete |
+| `onError` | `(error: Error) => void` | `undefined` | Called when an error occurs |
+| `onProgress` | `(stage: string, progress: number) => void` | `undefined` | Called to report progress updates |
+
+### FlyCutCaptionConfig
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Theme mode |
+| `language` | `string` | `'zh-CN'` | Interface language |
+| `asrLanguage` | `string` | `'auto'` | ASR recognition language |
+| `enableDragDrop` | `boolean` | `true` | Enable drag and drop file upload |
+| `enableExport` | `boolean` | `true` | Enable export functionality |
+| `enableVideoProcessing` | `boolean` | `true` | Enable video processing functionality |
+| `maxFileSize` | `number` | `500` | Maximum file size in MB |
+| `supportedFormats` | `string[]` | `['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']` | Supported file formats |
+
+## 🎨 Styling
+
+The component comes with built-in styles that you need to import:
+
+```tsx
+import '@flycut/caption-react/styles'
+```
+
+You can also customize the appearance by:
+
+1. **CSS Custom Properties**: Override CSS variables for colors and spacing
+2. **Custom CSS Classes**: Use the `className` prop to apply custom styles
+3. **Theme Configuration**: Use the `theme` config option for light/dark modes
+
+### CSS Variables
+
+```css
+:root {
+  --flycut-primary: #3b82f6;
+  --flycut-background: #ffffff;
+  --flycut-foreground: #1f2937;
+  --flycut-muted: #f3f4f6;
+  --flycut-border: #e5e7eb;
+}
+
+.dark {
+  --flycut-background: #111827;
+  --flycut-foreground: #f9fafb;
+  --flycut-muted: #374151;
+  --flycut-border: #4b5563;
+}
+```
+
+## 🌐 Internationalization
+
+The component supports multiple languages:
+
+- **Chinese (zh-CN)** - Default
+- **English (en-US)**
+
+```tsx
+<FlyCutCaption
+  config={{
+    language: 'en-US', // Switch to English
+    asrLanguage: 'en'  // English ASR
+  }}
+/>
+```
+
+## 🎬 Video Processing
+
+The component supports various video processing features:
+
+### Supported Formats
+
+- **Video**: MP4, WebM, AVI, MOV
+- **Audio**: MP3, WAV, OGG
+
+### Processing Options
+
+- **Quality**: Low, Medium, High
+- **Format**: MP4, WebM
+- **Subtitle Processing**: Burn-in, Separate file
+- **Audio Preservation**: Enabled by default
+
+## 📱 Browser Support
+
+- **Chrome** 88+
+- **Firefox** 78+
+- **Safari** 14+
+- **Edge** 88+
+
+## 🔧 Development
+
 ### Prerequisites
+
 - Node.js 18+
-- pnpm (recommended) or npm
+- pnpm 8+
 
-### Installation
+### Setup
 
-1. **Clone the project**
 ```bash
 git clone https://github.com/your-username/fly-cut-caption.git
 cd fly-cut-caption
-```
-
-2. **Install dependencies**
-```bash
 pnpm install
 ```
 
-3. **Start development server**
-```bash
-pnpm dev
-```
+### Development
 
-4. **Open browser**
-```
-http://localhost:5173
-```
-
-### Build for production
-```bash
-# Build project
-pnpm build
-
-# Preview build
-pnpm preview
-```
-
-## 📋 User Guide
-
-### 1. Upload Video File
-- Supported formats: MP4, WebM, AVI, MOV
-- Audio support: MP3, WAV, OGG
-- Drag files to upload area or click to select files
-
-![File Upload Interface](screenshots/flycut-caption-main-interface.png)
-
-After uploading, enter the ASR configuration interface:
-
-![ASR Setup Interface](screenshots/asr-setup-interface.png)
-
-### 2. Generate Subtitles
-- Select recognition language (supports Chinese, English, and many other languages)
-- Click start recognition, AI will automatically generate timestamped subtitles
-- Recognition process runs in background without affecting UI operations
-
-![ASR Processing Interface](screenshots/asr-processing-interface.png)
-
-### 3. Edit Subtitles
-- **Select segments**: Choose segments to delete in the subtitle list
-- **Batch operations**: Support select all, batch delete, restore deleted, etc.
-- **Real-time preview**: Click subtitle segments to jump to corresponding time points
-- **History**: Support undo/redo operations
-
-![Subtitle Editing Interface](screenshots/complete-subtitle-editing-interface.png)
-
-### 4. Video Preview
-- **Preview mode**: Automatically skip deleted segments to preview final result
-- **Keyboard shortcuts**:
-  - `Space`: Play/Pause
-  - `←/→`: Rewind/Fast forward 5 seconds
-  - `Shift + ←/→`: Rewind/Fast forward 10 seconds
-  - `↑/↓`: Adjust volume
-  - `M`: Mute/Unmute
-  - `F`: Fullscreen
-
-### 5. Subtitle Styling
-- **Font settings**: Font size, weight, color
-- **Position adjustment**: Subtitle display position, alignment
-- **Background style**: Background color, transparency, border
-- **Real-time preview**: WYSIWYG style adjustment
-
-### 6. Export Results
-- **Subtitle export**: SRT format (universal subtitle format), JSON format
-- **Video export**:
-  - Keep only non-deleted segments
-  - Optional subtitle burning to video
-  - Different quality settings available
-  - Multiple output formats
-
-## 🏗️ Project Architecture
-
-### Tech Stack
-- **Frontend Framework**: React 19 with Hooks
-- **Type Checking**: TypeScript 5.8
-- **Build Tool**: Vite 7.1
-- **Styling**: Tailwind CSS 4.1 + Shadcn/ui
-- **State Management**: Zustand + React Context
-- **AI Model**: Hugging Face Transformers.js
-- **Video Processing**: WebAV
-- **Internationalization**: react-i18next
-
-### Project Structure
-```
-src/
-├── components/          # UI Components
-│   ├── FileUpload/     # File upload component
-│   ├── VideoPlayer/    # Video player
-│   ├── SubtitleEditor/ # Subtitle editor
-│   ├── ProcessingPanel/ # Processing panel
-│   ├── ExportPanel/    # Export panel
-│   └── ui/             # Basic UI components
-├── hooks/              # Custom Hooks
-├── services/           # Business service layer
-│   ├── asrService.ts   # ASR speech recognition service
-│   └── UnifiedVideoProcessor.ts # Video processing service
-├── stores/             # State management
-│   ├── appStore.ts     # Global app state
-│   ├── historyStore.ts # Subtitle history
-│   └── themeStore.ts   # Theme state
-├── types/              # TypeScript type definitions
-├── utils/              # Utility functions
-├── workers/            # Web Workers
-│   └── asrWorker.ts    # ASR processing worker thread
-└── locales/            # Internationalization files
-```
-
-### Core Modules
-
-#### ASR Speech Recognition
-- Local speech recognition based on Whisper model
-- Web Workers background processing without blocking main thread
-- Support for multiple languages and audio formats
-- Generate precise word-level timestamps
-
-#### Subtitle Editor
-- Visual subtitle segment management
-- Support for batch selection and operations
-- Real-time video playback position synchronization
-- History and undo/redo functionality
-
-#### Video Processing
-- Local video processing based on WebAV
-- Support for interval trimming and merging
-- Subtitle burning functionality
-- Multiple output formats and quality options
-
-## 🛠️ Development Guide
-
-### Development Commands
 ```bash
 # Start development server
 pnpm dev
 
-# Type checking
-pnpm run typecheck
+# Build library
+pnpm run build:lib
 
-# Code linting
+# Build demo
+pnpm run build:demo
+
+# Lint code
 pnpm lint
-
-# Build project
-pnpm build
-
-# Preview build
-pnpm preview
 ```
 
-### Adding New Components
-The project uses Shadcn/ui component library:
-```bash
-pnpm dlx shadcn@latest add <component-name>
-```
+## 📄 License
 
-### Code Standards
-- TypeScript strict mode
-- ESLint + React-related rules
-- Functional components + Hooks
-- Component and modular design
+MIT © [FlyCut Team](https://github.com/your-username/fly-cut-caption)
 
 ## 🤝 Contributing
 
-We welcome contributions of all kinds!
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### How to Contribute
-1. Fork this project
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Create a Pull Request
+## 📞 Support
 
-### Contribution Types
-- 🐛 Bug fixes
-- ✨ New feature development
-- 📝 Documentation improvements
-- 🎨 UI/UX optimization
-- ⚡ Performance optimization
-- 🌐 Internationalization translation
-
-## 📝 License
-
-This project is licensed under the MIT License with additional terms:
-
-- ✅ **Allowed**: Personal, educational, commercial use
-- ✅ **Allowed**: Modification, distribution, creating derivative works
-- ❌ **Prohibited**: Removing or modifying logos, watermarks, branding elements in the software interface
-- ❌ **Prohibited**: Hiding or tampering with attribution notices
-
-If you wish to remove branding elements, please contact FlyCut Team for explicit written permission.
-
-See the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Hugging Face](https://huggingface.co/) - For providing the excellent Transformers.js library
-- [OpenAI Whisper](https://openai.com/research/whisper) - Powerful speech recognition model
-- [Shadcn/ui](https://ui.shadcn.com/) - Elegant UI component library
-- [WebAV](https://github.com/hughfenghen/WebAV) - Powerful Web audio/video processing library
-
-## 📞 Contact Us
-
-- Project Homepage: [GitHub Repository](https://github.com/your-username/fly-cut-caption)
-- Bug Reports: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
-- Feature Requests: [GitHub Discussions](https://github.com/your-username/fly-cut-caption/discussions)
+- 📧 Email: support@flycut.dev
+- 🐛 Issues: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
+- 📖 Documentation: [API Docs](https://flycut.dev/docs)
 
 ---
 
-<div align="center">
-
-**If this project helps you, please give us a ⭐ Star!**
-
-Made with ❤️ by FlyCut Team
-
-</div>
+Made with ❤️ by the FlyCut Team
