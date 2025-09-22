@@ -1,10 +1,18 @@
-# @flycut/caption-react
+# @fly-cut/caption-react
+
+<div align="center">
+
+![FlyCut Caption](screenshots/complete-subtitle-editing-interface.png)
 
 🎥 **FlyCut Caption** - A complete video subtitle editing React component with AI-powered speech recognition and visual editing capabilities.
 
-[![npm version](https://img.shields.io/npm/v/@flycut/caption-react.svg)](https://www.npmjs.com/package/@flycut/caption-react)
+[![npm version](https://img.shields.io/npm/v/@fly-cut/caption-react.svg)](https://www.npmjs.com/package/@fly-cut/caption-react)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
+
+[English](README.md) | [中文](README.zh.md)
+
+</div>
 
 ## ✨ Features
 
@@ -20,11 +28,11 @@
 ## 📦 Installation
 
 ```bash
-npm install @flycut/caption-react
+npm install @fly-cut/caption-react
 # or
-yarn add @flycut/caption-react
+yarn add @fly-cut/caption-react
 # or
-pnpm add @flycut/caption-react
+pnpm add @fly-cut/caption-react
 ```
 
 ## 🚀 Quick Start
@@ -33,8 +41,8 @@ pnpm add @flycut/caption-react
 
 ```tsx
 import React from 'react'
-import { FlyCutCaption } from '@flycut/caption-react'
-import '@flycut/caption-react/styles'
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
 
 function App() {
   return (
@@ -49,8 +57,8 @@ function App() {
 
 ```tsx
 import React from 'react'
-import { FlyCutCaption } from '@flycut/caption-react'
-import '@flycut/caption-react/styles'
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
 
 function App() {
   return (
@@ -95,7 +103,7 @@ function App() {
 
 ```bash
 # Install the package
-npm install @flycut/caption-react
+npm install @fly-cut/caption-react
 
 # For TypeScript projects, types are included
 # No additional @types package needed
@@ -106,16 +114,16 @@ npm install @flycut/caption-react
 The component requires CSS styles to work properly:
 
 ```tsx
-import '@flycut/caption-react/styles'
+import '@fly-cut/caption-react/styles'
 // or specific CSS file
-import '@flycut/caption-react/dist/caption-react.css'
+import '@fly-cut/caption-react/dist/caption-react.css'
 ```
 
 ### 3. Basic Integration
 
 ```tsx
-import { FlyCutCaption } from '@flycut/caption-react'
-import '@flycut/caption-react/styles'
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
 
 function VideoEditor() {
   return (
@@ -129,7 +137,7 @@ function VideoEditor() {
 ### 4. Event Handling
 
 ```tsx
-import { FlyCutCaption } from '@flycut/caption-react'
+import { FlyCutCaption } from '@fly-cut/caption-react'
 
 function VideoEditorWithEvents() {
   const handleFileSelected = (file: File) => {
@@ -169,7 +177,7 @@ function VideoEditorWithEvents() {
 ### 5. Configuration Options
 
 ```tsx
-import { FlyCutCaption } from '@flycut/caption-react'
+import { FlyCutCaption } from '@fly-cut/caption-react'
 
 function ConfiguredEditor() {
   const config = {
@@ -199,7 +207,7 @@ function ConfiguredEditor() {
 ### 6. Custom Styling
 
 ```tsx
-import { FlyCutCaption } from '@flycut/caption-react'
+import { FlyCutCaption } from '@fly-cut/caption-react'
 import './custom-styles.css'
 
 function StyledEditor() {
@@ -231,7 +239,7 @@ function StyledEditor() {
 
 ```tsx
 import { useState } from 'react'
-import { FlyCutCaption } from '@flycut/caption-react'
+import { FlyCutCaption } from '@fly-cut/caption-react'
 import { useStore } from 'zustand'
 
 function EditorWithStore() {
@@ -294,7 +302,7 @@ function EditorWithStore() {
 The component comes with built-in styles that you need to import:
 
 ```tsx
-import '@flycut/caption-react/styles'
+import '@fly-cut/caption-react/styles'
 ```
 
 You can also customize the appearance by:
@@ -329,7 +337,7 @@ FlyCut Caption supports componentized internationalization with built-in and cus
 ### Built-in Language Packs
 
 ```tsx
-import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
+import { FlyCutCaption, zhCN, enUS } from '@fly-cut/caption-react'
 
 // Using built-in Chinese language pack
 <FlyCutCaption
@@ -347,7 +355,7 @@ import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
 ### Custom Language Packs
 
 ```tsx
-import { FlyCutCaption, type FlyCutCaptionLocale } from '@flycut/caption-react'
+import { FlyCutCaption, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
 
 // Create custom language pack (Japanese example)
 const customJaJP: FlyCutCaptionLocale = {
@@ -398,7 +406,7 @@ The new componentized approach provides better language synchronization between 
 
 ```tsx
 import { useState } from 'react'
-import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@flycut/caption-react'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
 
 function App() {
   const [currentLanguage, setCurrentLanguage] = useState('zh')
@@ -508,7 +516,7 @@ function App() {
 
 ```tsx
 // Import locale utilities
-import { LocaleProvider, useLocale, useTranslation } from '@flycut/caption-react'
+import { LocaleProvider, useLocale, useTranslation } from '@fly-cut/caption-react'
 
 // Use LocaleProvider for nested components
 <LocaleProvider language="zh" locale={zhCN}>
@@ -556,8 +564,8 @@ The component supports various video processing features:
 
 ```tsx
 import React, { useState, useCallback } from 'react'
-import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@flycut/caption-react'
-import '@flycut/caption-react/styles'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
 
 function VideoEditorApp() {
   const [language, setLanguage] = useState<'zh' | 'en'>('zh')
@@ -660,7 +668,7 @@ import { useState } from 'react'
 
 // Dynamically import to avoid SSR issues
 const FlyCutCaption = dynamic(
-  () => import('@flycut/caption-react').then(mod => mod.FlyCutCaption),
+  () => import('@fly-cut/caption-react').then(mod => mod.FlyCutCaption),
   { ssr: false }
 )
 
@@ -799,7 +807,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📞 Support
 
-- 📧 Email: support@flycut.dev
+- 📧 Email: x007xyzabc@gmail.com
 - 🐛 Issues: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
 - 📖 Documentation: [API Docs](https://flycut.dev/docs)
 

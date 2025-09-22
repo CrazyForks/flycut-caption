@@ -119,60 +119,64 @@ pnpm preview
 
 ## 🌐 国际化设计
 
-FlyCut Caption 采用组件化国际化设计，支持灵活的语言包管理和实时语言切换。
+FlyCut Caption 采用组件化国际化设计，支持灵活的语言包管理和实时语言切换。组件能够自动同步外部语言变化与内部 UI 组件。
 
-### 支持的语言
-- **中文（简体）**：内置语言包，完整翻译
-- **英文（美式）**：内置语言包，完整翻译
-- **自定义语言**：支持添加任意语言包（提供日语示例）
+### 内置语言包
 
-### 组件化国际化特性
-- **自动同步**：外部语言切换自动同步到内部组件
-- **类型安全**：完整的 TypeScript 类型定义
-- **按需加载**：语言包可按需导入
-- **扩展性强**：支持自定义语言包和动态注册
-
-### 使用示例
-
-#### 基础用法
 ```tsx
-import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
+import { FlyCutCaption, zhCN, enUS } from '@fly-cut/caption-react'
 
-// 使用中文语言包
+// 使用内置中文语言包
 <FlyCutCaption
   config={{ language: 'zh' }}
   locale={zhCN}
 />
 
-// 使用英文语言包
+// 使用内置英文语言包
 <FlyCutCaption
   config={{ language: 'en' }}
   locale={enUS}
 />
 ```
 
-#### 自定义语言包
-```tsx
-import { FlyCutCaption, type FlyCutCaptionLocale } from '@flycut/caption-react'
+### 自定义语言包
 
-// 创建日语语言包示例
+```tsx
+import { FlyCutCaption, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
+
+// 创建自定义语言包（日语示例）
 const customJaJP: FlyCutCaptionLocale = {
   common: {
     loading: '読み込み中...',
     error: 'エラー',
     success: '成功',
+    confirm: '確認',
+    cancel: 'キャンセル',
+    ok: 'OK',
     // ... 更多通用翻译
   },
   components: {
     fileUpload: {
       dragDropText: 'ビデオファイルをここにドラッグするか、クリックして選択',
       selectFile: 'ファイルを選択',
+      supportedFormats: 'サポート形式：',
       // ... 更多组件翻译
+    },
+    subtitleEditor: {
+      title: '字幕エディター',
+      addSubtitle: '字幕を追加',
+      deleteSelected: '選択項目を削除',
+      // ... 更多编辑器翻译
     },
     // ... 其他组件翻译
   },
   messages: {
-    // ... 消息翻译
+    fileUpload: {
+      uploadSuccess: 'ファイルアップロード成功',
+      uploadFailed: 'ファイルアップロード失敗',
+      // ... 更多消息翻译
+    },
+    // ... 其他消息翻译
   }
 }
 
@@ -183,28 +187,35 @@ const customJaJP: FlyCutCaptionLocale = {
 />
 ```
 
-#### 动态语言切换
+### 组件化语言切换
+
+新的组件化方法提供外部控制与内部组件间更好的语言同步：
+
 ```tsx
 import { useState } from 'react'
-import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
 
 function App() {
   const [currentLanguage, setCurrentLanguage] = useState('zh')
-  const [currentLocale, setCurrentLocale] = useState(undefined)
+  const [currentLocale, setCurrentLocale] = useState<FlyCutCaptionLocale | undefined>(undefined)
 
   const handleLanguageChange = (language: string) => {
+    console.log('语言已切换为:', language)
     setCurrentLanguage(language)
 
     // 根据语言设置相应的语言包
     switch (language) {
       case 'zh':
+      case 'zh-CN':
         setCurrentLocale(zhCN)
         break
       case 'en':
+      case 'en-US':
         setCurrentLocale(enUS)
         break
       case 'ja':
-        setCurrentLocale(customJaJP)
+      case 'ja-JP':
+        setCurrentLocale(customJaJP) // 自定义日语包
         break
       default:
         setCurrentLocale(undefined) // 使用默认语言包
@@ -212,62 +223,312 @@ function App() {
   }
 
   return (
-    <div>
-      {/* 外部语言切换按钮 */}
-      <div>
-        <button onClick={() => handleLanguageChange('zh')}>中文</button>
-        <button onClick={() => handleLanguageChange('en')}>English</button>
-        <button onClick={() => handleLanguageChange('ja')}>日本語</button>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold text-center mb-8">
+          FlyCut Caption 国际化演示
+        </h1>
 
-      {/* FlyCut Caption 组件 */}
-      <FlyCutCaption
-        config={{
-          language: currentLanguage,
-          enableLanguageSelector: true // 内部语言选择器会自动同步
-        }}
-        locale={currentLocale}
-        onLanguageChange={handleLanguageChange} // 内部变化同步到外部状态
-      />
+        {/* 外部语言控制 */}
+        <div className="mb-8 text-center space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">语言切换器</h2>
+            <div className="flex justify-center gap-4">
+              <button
+                className={`px-4 py-2 rounded ${currentLanguage === 'zh' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+                onClick={() => handleLanguageChange('zh')}
+              >
+                中文 (内置)
+              </button>
+              <button
+                className={`px-4 py-2 rounded ${currentLanguage === 'en' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+                onClick={() => handleLanguageChange('en')}
+              >
+                English (内置)
+              </button>
+              <button
+                className={`px-4 py-2 rounded ${currentLanguage === 'ja' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
+                onClick={() => handleLanguageChange('ja')}
+              >
+                日本語 (自定义)
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-muted p-4 rounded-lg">
+            <p className="text-sm">
+              <strong>当前语言:</strong> {currentLanguage}
+            </p>
+            <p className="text-sm">
+              <strong>语言包类型:</strong> {currentLocale ? '自定义语言包' : '内置语言包'}
+            </p>
+          </div>
+        </div>
+
+        {/* FlyCut Caption 组件 */}
+        <div className="border rounded-lg p-4">
+          <h2 className="text-xl font-semibold mb-4">FlyCut Caption 组件</h2>
+          <FlyCutCaption
+            config={{
+              theme: 'auto',
+              language: currentLanguage,
+              enableThemeToggle: true,
+              enableLanguageSelector: true  // 内部语言选择器将与外部变化同步
+            }}
+            locale={currentLocale}
+            onLanguageChange={handleLanguageChange}  // 将内部变化同步回外部状态
+            onError={(error) => {
+              console.error('组件错误:', error)
+            }}
+            onProgress={(stage, progress) => {
+              console.log(`进度: ${stage} - ${progress}%`)
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }
 ```
 
-### 语言包结构
-```typescript
-interface FlyCutCaptionLocale {
-  common: {
-    loading: string
-    error: string
-    success: string
-    // ... 更多通用字段
-  }
-  components: {
-    fileUpload: {
-      dragDropText: string
-      selectFile: string
-      // ... 更多文件上传字段
-    }
-    subtitleEditor: {
-      title: string
-      addSubtitle: string
-      // ... 更多字幕编辑器字段
-    }
-    // ... 其他组件
-  }
-  messages: {
-    fileUpload: {
-      uploadSuccess: string
-      uploadFailed: string
-      // ... 更多消息字段
-    }
-    // ... 其他消息类型
-  }
-}
+### 可用语言包
+
+| 语言 | 导入方式 | 描述 |
+|----------|---------|-------------|
+| 中文（简体） | `zhCN` | 简体中文 |
+| 英文（美式） | `enUS` | English (United States) |
+| 默认 | `defaultLocale` | 与 `zhCN` 相同 |
+
+### 语言包 API
+
+```tsx
+// 导入语言包工具
+import { LocaleProvider, useLocale, useTranslation } from '@fly-cut/caption-react'
+
+// 为嵌套组件使用 LocaleProvider
+<LocaleProvider language="zh" locale={zhCN}>
+  <YourComponent />
+</LocaleProvider>
+
+// 访问语言包上下文
+const { t, setLanguage, registerLocale } = useLocale()
+
+// 注册自定义语言包
+registerLocale('fr', frenchLocale)
+
+// 程序化语言切换
+setLanguage('fr')
 ```
 
 📚 **详细国际化指南**：查看 [INTERNATIONALIZATION.md](./INTERNATIONALIZATION.md) 了解完整的语言包、自定义本地化和高级国际化功能文档。
+
+## 📚 使用指南
+
+### 1. 安装与设置
+
+```bash
+# 安装包
+npm install @fly-cut/caption-react
+
+# TypeScript 项目无需额外类型包
+# 类型定义已包含在内
+```
+
+### 2. 导入样式
+
+组件需要 CSS 样式才能正常工作：
+
+```tsx
+import '@fly-cut/caption-react/styles'
+// 或指定 CSS 文件
+import '@fly-cut/caption-react/dist/caption-react.css'
+```
+
+### 3. 基础集成
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
+
+function VideoEditor() {
+  return (
+    <div className="video-editor-container">
+      <FlyCutCaption />
+    </div>
+  )
+}
+```
+
+### 4. 事件处理
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+
+function VideoEditorWithEvents() {
+  const handleFileSelected = (file: File) => {
+    console.log('选择的文件:', file.name, file.size)
+  }
+
+  const handleSubtitleGenerated = (subtitles: SubtitleChunk[]) => {
+    console.log('生成的字幕:', subtitles.length)
+    // 保存字幕到后端
+    saveSubtitles(subtitles)
+  }
+
+  const handleVideoProcessed = (blob: Blob, filename: string) => {
+    // 处理生成的视频
+    const url = URL.createObjectURL(blob)
+    // 下载或上传到服务器
+    downloadFile(url, filename)
+  }
+
+  const handleError = (error: Error) => {
+    // 优雅处理错误
+    console.error('FlyCut Caption 错误:', error)
+    showErrorNotification(error.message)
+  }
+
+  return (
+    <FlyCutCaption
+      onFileSelected={handleFileSelected}
+      onSubtitleGenerated={handleSubtitleGenerated}
+      onVideoProcessed={handleVideoProcessed}
+      onError={handleError}
+    />
+  )
+}
+```
+
+### 5. 配置选项
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+
+function ConfiguredEditor() {
+  const config = {
+    // 主题设置
+    theme: 'dark' as const,
+
+    // 语言设置
+    language: 'zh-CN',
+    asrLanguage: 'zh',
+
+    // 功能开关
+    enableDragDrop: true,
+    enableExport: true,
+    enableVideoProcessing: true,
+    enableThemeToggle: true,
+    enableLanguageSelector: true,
+
+    // 文件限制
+    maxFileSize: 1000, // 1GB
+    supportedFormats: ['mp4', 'webm', 'mov']
+  }
+
+  return (
+    <FlyCutCaption config={config} />
+  )
+}
+```
+
+### 6. 自定义样式
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import './custom-styles.css'
+
+function StyledEditor() {
+  return (
+    <FlyCutCaption
+      className="my-custom-editor"
+      style={{
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      }}
+    />
+  )
+}
+```
+
+```css
+/* custom-styles.css */
+.my-custom-editor {
+  --flycut-primary: #10b981;
+  --flycut-border-radius: 12px;
+}
+
+.my-custom-editor .subtitle-item {
+  border-radius: var(--flycut-border-radius);
+}
+```
+
+## 📖 API 参考
+
+### FlyCutCaptionProps
+
+| 属性 | 类型 | 默认值 | 描述 |
+|------|------|---------|-------------|
+| `className` | `string` | `undefined` | 自定义 CSS 类名 |
+| `style` | `CSSProperties` | `undefined` | 自定义内联样式 |
+| `config` | `FlyCutCaptionConfig` | `defaultConfig` | 组件配置 |
+| `locale` | `FlyCutCaptionLocale` | `undefined` | 自定义语言包 |
+| `onReady` | `() => void` | `undefined` | 组件就绪时调用 |
+| `onFileSelected` | `(file: File) => void` | `undefined` | 选择文件时调用 |
+| `onSubtitleGenerated` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | 生成字幕时调用 |
+| `onSubtitleChanged` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | 字幕改变时调用 |
+| `onVideoProcessed` | `(blob: Blob, filename: string) => void` | `undefined` | 视频处理完成时调用 |
+| `onExportComplete` | `(blob: Blob, filename: string) => void` | `undefined` | 导出完成时调用 |
+| `onError` | `(error: Error) => void` | `undefined` | 出现错误时调用 |
+| `onProgress` | `(stage: string, progress: number) => void` | `undefined` | 进度更新时调用 |
+| `onLanguageChange` | `(language: string) => void` | `undefined` | 语言变化时调用 |
+
+### FlyCutCaptionConfig
+
+| 属性 | 类型 | 默认值 | 描述 |
+|----------|------|---------|-------------|
+| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | 主题模式 |
+| `language` | `string` | `'zh-CN'` | 界面语言 |
+| `asrLanguage` | `string` | `'auto'` | ASR 识别语言 |
+| `enableDragDrop` | `boolean` | `true` | 启用拖拽文件上传 |
+| `enableExport` | `boolean` | `true` | 启用导出功能 |
+| `enableVideoProcessing` | `boolean` | `true` | 启用视频处理功能 |
+| `enableThemeToggle` | `boolean` | `true` | 启用主题切换按钮 |
+| `enableLanguageSelector` | `boolean` | `true` | 启用语言选择器 |
+| `maxFileSize` | `number` | `500` | 最大文件大小（MB） |
+| `supportedFormats` | `string[]` | `['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']` | 支持的文件格式 |
+
+## 🎨 样式定制
+
+组件自带内置样式，需要导入：
+
+```tsx
+import '@fly-cut/caption-react/styles'
+```
+
+您也可以通过以下方式自定义外观：
+
+1. **CSS 自定义属性**：覆盖颜色和间距的 CSS 变量
+2. **自定义 CSS 类**：使用 `className` 属性应用自定义样式
+3. **主题配置**：使用 `theme` 配置选项切换明暗模式
+
+### CSS 变量
+
+```css
+:root {
+  --flycut-primary: #3b82f6;
+  --flycut-background: #ffffff;
+  --flycut-foreground: #1f2937;
+  --flycut-muted: #f3f4f6;
+  --flycut-border: #e5e7eb;
+}
+
+.dark {
+  --flycut-background: #111827;
+  --flycut-foreground: #f9fafb;
+  --flycut-muted: #374151;
+  --flycut-border: #4b5563;
+}
+```
 
 ## 🏗️ 项目架构
 
@@ -358,6 +619,206 @@ pnpm dlx shadcn@latest add <component-name>
 - 函数式组件 + Hooks
 - 组件化和模块化设计
 
+## 🎬 视频处理
+
+组件支持各种视频处理功能：
+
+### 支持的格式
+
+- **视频**：MP4, WebM, AVI, MOV
+- **音频**：MP3, WAV, OGG
+
+### 处理选项
+
+- **质量**：低、中、高
+- **格式**：MP4、WebM
+- **字幕处理**：烧录、单独文件
+- **音频保留**：默认启用
+
+## 📱 浏览器支持
+
+- **Chrome** 88+
+- **Firefox** 78+
+- **Safari** 14+
+- **Edge** 88+
+
+## 💡 示例与最佳实践
+
+### 完整 React 应用程序
+
+```tsx
+import React, { useState, useCallback } from 'react'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
+
+function VideoEditorApp() {
+  const [language, setLanguage] = useState<'zh' | 'en'>('zh')
+  const [subtitles, setSubtitles] = useState([])
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  const locale = language === 'zh' ? zhCN : enUS
+
+  const handleLanguageChange = useCallback((newLang: string) => {
+    setLanguage(newLang as 'zh' | 'en')
+  }, [])
+
+  const handleSubtitleGenerated = useCallback((newSubtitles) => {
+    setSubtitles(newSubtitles)
+    // 自动保存到本地存储
+    localStorage.setItem('flycut-subtitles', JSON.stringify(newSubtitles))
+  }, [])
+
+  const handleProgress = useCallback((stage: string, progress: number) => {
+    setIsProcessing(progress < 100)
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">视频编辑器</h1>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleLanguageChange('zh')}
+                className={language === 'zh' ? 'btn-primary' : 'btn-secondary'}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => handleLanguageChange('en')}
+                className={language === 'en' ? 'btn-primary' : 'btn-secondary'}
+              >
+                English
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <FlyCutCaption
+            config={{
+              theme: 'auto',
+              language,
+              enableDragDrop: true,
+              enableExport: true,
+              maxFileSize: 1000
+            }}
+            locale={locale}
+            onLanguageChange={handleLanguageChange}
+            onSubtitleGenerated={handleSubtitleGenerated}
+            onProgress={handleProgress}
+            onError={(error) => {
+              console.error('错误:', error)
+              // 显示用户友好的错误消息
+              alert('处理过程中出现错误，请重试')
+            }}
+          />
+        </div>
+
+        {isProcessing && (
+          <div className="mt-4 text-center">
+            <div className="inline-flex items-center px-4 py-2 bg-blue-100 rounded-lg">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              处理中，请稍候...
+            </div>
+          </div>
+        )}
+
+        {subtitles.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4">生成的字幕 ({subtitles.length} 条)</h2>
+            <div className="text-sm text-gray-600">
+              字幕已自动保存到本地存储
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
+
+export default VideoEditorApp
+```
+
+### Next.js 集成
+
+```tsx
+// pages/editor.tsx
+import dynamic from 'next/dynamic'
+import { useState } from 'react'
+
+// 动态导入以避免 SSR 问题
+const FlyCutCaption = dynamic(
+  () => import('@fly-cut/caption-react').then(mod => mod.FlyCutCaption),
+  { ssr: false }
+)
+
+export default function EditorPage() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <FlyCutCaption
+        config={{
+          theme: 'auto',
+          language: 'zh'
+        }}
+        onVideoProcessed={(blob, filename) => {
+          // 处理视频处理结果
+          const url = URL.createObjectURL(blob)
+          window.open(url, '_blank')
+        }}
+      />
+    </div>
+  )
+}
+```
+
+### 最佳实践
+
+1. **始终导入样式**：组件需要 CSS 才能正常工作
+2. **优雅处理错误**：实现适当的错误边界和用户反馈
+3. **性能优化**：对 SSR 应用程序使用动态导入
+4. **提供用户反馈**：显示加载状态和进度指示器
+5. **响应式设计**：确保容器具有适当的高度/宽度
+6. **无障碍性**：组件包含 ARIA 标签和键盘导航
+7. **内存管理**：组件卸载时清理 blob URL
+
+## 🔧 开发
+
+### 环境要求
+
+- Node.js 18+
+- pnpm 8+
+
+### 设置
+
+```bash
+git clone https://github.com/your-username/fly-cut-caption.git
+cd fly-cut-caption
+pnpm install
+```
+
+### 开发
+
+```bash
+# 启动开发服务器
+pnpm dev
+
+# 构建库
+pnpm run build:lib
+
+# 构建演示
+pnpm run build:demo
+
+# 代码检查
+pnpm lint
+
+# 运行测试应用
+cd test-app && pnpm dev
+```
+
 ## 🤝 贡献指南
 
 我们欢迎各种形式的贡献！
@@ -397,11 +858,11 @@ pnpm dlx shadcn@latest add <component-name>
 - [Shadcn/ui](https://ui.shadcn.com/) - 优雅的 UI 组件库
 - [WebAV](https://github.com/hughfenghen/WebAV) - 强大的 Web 音视频处理库
 
-## 📞 联系我们
+## 📞 支持
 
-- 项目主页: [GitHub Repository](https://github.com/your-username/fly-cut-caption)
-- 问题反馈: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
-- 功能建议: [GitHub Discussions](https://github.com/your-username/fly-cut-caption/discussions)
+- 📧 邮箱: x007xyzabc@gmail.com
+- 🐛 问题反馈: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
+- 📖 文档: [API 文档](https://flycut.dev/docs)
 
 ---
 
