@@ -1,14 +1,10 @@
-# @fly-cut/caption-react
+# FlyCut Caption - AI-Powered Video Subtitle Editing Tool
 
 <div align="center">
 
 ![FlyCut Caption](screenshots/complete-subtitle-editing-interface.png)
 
-🎥 **FlyCut Caption** - A complete video subtitle editing React component with AI-powered speech recognition and visual editing capabilities.
-
-[![npm version](https://img.shields.io/npm/v/@fly-cut/caption-react.svg)](https://www.npmjs.com/package/@fly-cut/caption-react)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
+A powerful AI-driven video subtitle editing tool focused on intelligent subtitle generation, editing, and video clipping.
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -16,336 +12,127 @@
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Speech Recognition** - Automatic subtitle generation using Whisper model
-- ✂️ **Visual Subtitle Editing** - Interactive timeline-based subtitle editing
-- 🎨 **Customizable Styling** - Flexible subtitle appearance configuration
-- 🎬 **Video Processing** - Built-in video cutting and processing capabilities
-- 🌐 **Multi-language Support** - i18n support for Chinese and English
-- 🎭 **Theme Support** - Light/dark mode with system preference detection
-- 📱 **Responsive Design** - Works seamlessly on desktop and mobile devices
-- 🚀 **TypeScript Ready** - Full TypeScript support with type definitions
+### 🎯 Core Features
+- **🎤 Intelligent Speech Recognition**: High-precision speech-to-text based on Whisper model, supporting multiple languages
+- **✂️ Visual Subtitle Editing**: Intuitive subtitle segment selection and deletion interface
+- **🎬 Real-time Video Preview**: Video player synchronized with subtitles, supporting interval playback
+- **📤 Multi-format Export**: Support for SRT, JSON subtitle formats and video file export
+- **🎨 Subtitle Style Customization**: Custom subtitle fonts, colors, positions and other styles
+- **🌐 Internationalization Support**: Componentized internationalization design, supporting Chinese, English, and custom language packs (such as Japanese examples)
 
-## 📦 Installation
-
-```bash
-npm install @fly-cut/caption-react
-# or
-yarn add @fly-cut/caption-react
-# or
-pnpm add @fly-cut/caption-react
-```
+### 🔧 Technical Features
+- **⚡ Modern Tech Stack**: React 19 + TypeScript + Vite + Tailwind CSS
+- **🧠 Local AI Processing**: Using Hugging Face Transformers.js to run AI models locally in the browser
+- **🎯 Web Workers**: ASR processing runs in background threads without blocking the main interface
+- **📱 Responsive Design**: Modern interface adapted to different screen sizes
+- **🎪 Component Architecture**: Modular design, easy to maintain and extend
 
 ## 🚀 Quick Start
 
-### Basic Usage
+### Prerequisites
+- Node.js 18+
+- pnpm (recommended) or npm
 
-```tsx
-import React from 'react'
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import '@fly-cut/caption-react/styles'
+### Installation Steps
 
-function App() {
-  return (
-    <div style={{ height: '100vh' }}>
-      <FlyCutCaption />
-    </div>
-  )
-}
-```
-
-### With Configuration
-
-```tsx
-import React from 'react'
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import '@fly-cut/caption-react/styles'
-
-function App() {
-  return (
-    <div style={{ height: '100vh' }}>
-      <FlyCutCaption
-        config={{
-          theme: 'auto',
-          language: 'zh-CN',
-          asrLanguage: 'auto',
-          enableDragDrop: true,
-          enableExport: true,
-          enableVideoProcessing: true,
-          maxFileSize: 500,
-          supportedFormats: ['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']
-        }}
-        onReady={() => console.log('FlyCut Caption is ready')}
-        onFileSelected={(file) => console.log('File selected:', file.name)}
-        onSubtitleGenerated={(subtitles) => console.log('Subtitles generated:', subtitles.length)}
-        onSubtitleChanged={(subtitles) => console.log('Subtitles changed:', subtitles.length)}
-        onVideoProcessed={(blob, filename) => {
-          // Handle processed video
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = filename
-          a.click()
-        }}
-        onExportComplete={(blob, filename) => {
-          console.log('Export complete:', filename)
-        }}
-        onError={(error) => console.error('Error:', error)}
-        onProgress={(stage, progress) => console.log(\`\${stage}: \${progress}%\`)}
-      />
-    </div>
-  )
-}
-```
-
-## 📚 Usage Guide
-
-### 1. Installation & Setup
-
+1. **Clone the project**
 ```bash
-# Install the package
-npm install @fly-cut/caption-react
-
-# For TypeScript projects, types are included
-# No additional @types package needed
+git clone https://github.com/your-username/fly-cut-caption.git
+cd fly-cut-caption
 ```
 
-### 2. Import Styles
-
-The component requires CSS styles to work properly:
-
-```tsx
-import '@fly-cut/caption-react/styles'
-// or specific CSS file
-import '@fly-cut/caption-react/dist/caption-react.css'
+2. **Install dependencies**
+```bash
+pnpm install
 ```
 
-### 3. Basic Integration
-
-```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import '@fly-cut/caption-react/styles'
-
-function VideoEditor() {
-  return (
-    <div className="video-editor-container">
-      <FlyCutCaption />
-    </div>
-  )
-}
+3. **Start development server**
+```bash
+pnpm dev
 ```
 
-### 4. Event Handling
-
-```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
-
-function VideoEditorWithEvents() {
-  const handleFileSelected = (file: File) => {
-    console.log('Selected file:', file.name, file.size)
-  }
-
-  const handleSubtitleGenerated = (subtitles: SubtitleChunk[]) => {
-    console.log('Generated subtitles:', subtitles.length)
-    // Save subtitles to your backend
-    saveSubtitles(subtitles)
-  }
-
-  const handleVideoProcessed = (blob: Blob, filename: string) => {
-    // Handle the processed video
-    const url = URL.createObjectURL(blob)
-    // Download or upload to your server
-    downloadFile(url, filename)
-  }
-
-  const handleError = (error: Error) => {
-    // Handle errors gracefully
-    console.error('FlyCut Caption error:', error)
-    showErrorNotification(error.message)
-  }
-
-  return (
-    <FlyCutCaption
-      onFileSelected={handleFileSelected}
-      onSubtitleGenerated={handleSubtitleGenerated}
-      onVideoProcessed={handleVideoProcessed}
-      onError={handleError}
-    />
-  )
-}
+4. **Open browser**
+```
+http://localhost:5173
 ```
 
-### 5. Configuration Options
+### Build for Production
+```bash
+# Build project
+pnpm build
 
-```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
-
-function ConfiguredEditor() {
-  const config = {
-    // Theme settings
-    theme: 'dark' as const,
-
-    // Language settings
-    language: 'en-US',
-    asrLanguage: 'en',
-
-    // Feature toggles
-    enableDragDrop: true,
-    enableExport: true,
-    enableVideoProcessing: true,
-
-    // File constraints
-    maxFileSize: 1000, // 1GB
-    supportedFormats: ['mp4', 'webm', 'mov']
-  }
-
-  return (
-    <FlyCutCaption config={config} />
-  )
-}
+# Preview build result
+pnpm preview
 ```
 
-### 6. Custom Styling
+## 📋 User Guide
 
-```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import './custom-styles.css'
+### 1. Upload Video Files
+- Supported formats: MP4, WebM, AVI, MOV
+- Supported audio: MP3, WAV, OGG
+- Drag and drop files to upload area or click to select files
 
-function StyledEditor() {
-  return (
-    <FlyCutCaption
-      className="my-custom-editor"
-      style={{
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-      }}
-    />
-  )
-}
-```
+![File Upload Interface](screenshots/flycut-caption-main-interface.png)
 
-```css
-/* custom-styles.css */
-.my-custom-editor {
-  --flycut-primary: #10b981;
-  --flycut-border-radius: 12px;
-}
+After uploading, enter the ASR configuration interface:
 
-.my-custom-editor .subtitle-item {
-  border-radius: var(--flycut-border-radius);
-}
-```
+![ASR Setup Interface](screenshots/asr-setup-interface.png)
 
-### 7. Integration with State Management
+### 2. Generate Subtitles
+- Select recognition language (supports Chinese, English and other languages)
+- Click start recognition, AI will automatically generate timestamped subtitles
+- Recognition process runs in background without affecting interface operations
 
-```tsx
-import { useState } from 'react'
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import { useStore } from 'zustand'
+![ASR Processing Interface](screenshots/asr-processing-interface.png)
 
-function EditorWithStore() {
-  const { setSubtitles, setCurrentVideo } = useStore()
-  const [isProcessing, setIsProcessing] = useState(false)
+### 3. Edit Subtitles
+- **Select segments**: Choose subtitle segments to delete from the list
+- **Batch operations**: Support select all, batch delete, undo delete operations
+- **Real-time preview**: Click subtitle segments to jump to corresponding time points
+- **History records**: Support undo/redo operations
 
-  return (
-    <FlyCutCaption
-      onFileSelected={(file) => {
-        setCurrentVideo(file)
-      }}
-      onSubtitleGenerated={(subtitles) => {
-        setSubtitles(subtitles)
-      }}
-      onProgress={(stage, progress) => {
-        setIsProcessing(progress < 100)
-      }}
-    />
-  )
-}
-```
+![Subtitle Editing Interface](screenshots/complete-subtitle-editing-interface.png)
 
-## 📖 API Reference
+### 4. Video Preview
+- **Preview mode**: Automatically skip deleted segments to preview final result
+- **Keyboard shortcuts**:
+  - `Space`: Play/Pause
+  - `←/→`: Rewind/Fast forward 5 seconds
+  - `Shift + ←/→`: Rewind/Fast forward 10 seconds
+  - `↑/↓`: Adjust volume
+  - `M`: Mute/Unmute
+  - `F`: Fullscreen
 
-### FlyCutCaptionProps
+### 5. Subtitle Styling
+- **Font settings**: Font size, weight, color
+- **Position adjustment**: Subtitle display position, alignment
+- **Background style**: Background color, transparency, border
+- **Real-time preview**: WYSIWYG style adjustment
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `undefined` | Custom CSS class name |
-| `style` | `CSSProperties` | `undefined` | Custom inline styles |
-| `config` | `FlyCutCaptionConfig` | `defaultConfig` | Component configuration |
-| `locale` | `FlyCutCaptionLocale` | `undefined` | Custom language pack |
-| `onReady` | `() => void` | `undefined` | Called when component is ready |
-| `onFileSelected` | `(file: File) => void` | `undefined` | Called when a file is selected |
-| `onSubtitleGenerated` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are generated |
-| `onSubtitleChanged` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are changed |
-| `onVideoProcessed` | `(blob: Blob, filename: string) => void` | `undefined` | Called when video processing is complete |
-| `onExportComplete` | `(blob: Blob, filename: string) => void` | `undefined` | Called when export is complete |
-| `onError` | `(error: Error) => void` | `undefined` | Called when an error occurs |
-| `onProgress` | `(stage: string, progress: number) => void` | `undefined` | Called to report progress updates |
-| `onLanguageChange` | `(language: string) => void` | `undefined` | Called when language changes |
+### 6. Export Results
+- **Subtitle export**: SRT format (universal subtitle format), JSON format
+- **Video export**:
+  - Keep only non-deleted segments
+  - Option to burn subtitles into video
+  - Support different quality settings
+  - Multiple format outputs
 
-### FlyCutCaptionConfig
+## 🌐 Internationalization Design
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Theme mode |
-| `language` | `string` | `'zh-CN'` | Interface language |
-| `asrLanguage` | `string` | `'auto'` | ASR recognition language |
-| `enableDragDrop` | `boolean` | `true` | Enable drag and drop file upload |
-| `enableExport` | `boolean` | `true` | Enable export functionality |
-| `enableVideoProcessing` | `boolean` | `true` | Enable video processing functionality |
-| `enableThemeToggle` | `boolean` | `true` | Enable theme toggle button |
-| `enableLanguageSelector` | `boolean` | `true` | Enable language selector |
-| `maxFileSize` | `number` | `500` | Maximum file size in MB |
-| `supportedFormats` | `string[]` | `['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']` | Supported file formats |
-
-## 🎨 Styling
-
-The component comes with built-in styles that you need to import:
-
-```tsx
-import '@fly-cut/caption-react/styles'
-```
-
-You can also customize the appearance by:
-
-1. **CSS Custom Properties**: Override CSS variables for colors and spacing
-2. **Custom CSS Classes**: Use the `className` prop to apply custom styles
-3. **Theme Configuration**: Use the `theme` config option for light/dark modes
-
-### CSS Variables
-
-```css
-:root {
-  --flycut-primary: #3b82f6;
-  --flycut-background: #ffffff;
-  --flycut-foreground: #1f2937;
-  --flycut-muted: #f3f4f6;
-  --flycut-border: #e5e7eb;
-}
-
-.dark {
-  --flycut-background: #111827;
-  --flycut-foreground: #f9fafb;
-  --flycut-muted: #374151;
-  --flycut-border: #4b5563;
-}
-```
-
-## 🌐 Internationalization
-
-FlyCut Caption supports componentized internationalization with built-in and custom language packs. The component automatically syncs external language changes with internal UI components.
+FlyCut Caption adopts componentized internationalization design, supporting flexible language pack management and real-time language switching. The component can automatically sync external language changes with internal UI components.
 
 ### Built-in Language Packs
 
 ```tsx
 import { FlyCutCaption, zhCN, enUS } from '@fly-cut/caption-react'
 
-// Using built-in Chinese language pack
+// Use built-in Chinese language pack
 <FlyCutCaption
   config={{ language: 'zh' }}
   locale={zhCN}
 />
 
-// Using built-in English language pack
+// Use built-in English language pack
 <FlyCutCaption
   config={{ language: 'en' }}
   locale={enUS}
@@ -413,10 +200,10 @@ function App() {
   const [currentLocale, setCurrentLocale] = useState<FlyCutCaptionLocale | undefined>(undefined)
 
   const handleLanguageChange = (language: string) => {
-    console.log('Language changed to:', language)
+    console.log('Language switched to:', language)
     setCurrentLanguage(language)
 
-    // Set appropriate language pack based on language
+    // Set corresponding language pack based on language
     switch (language) {
       case 'zh':
       case 'zh-CN':
@@ -473,7 +260,7 @@ function App() {
               <strong>Current Language:</strong> {currentLanguage}
             </p>
             <p className="text-sm">
-              <strong>Locale Type:</strong> {currentLocale ? 'Custom Locale' : 'Built-in Locale'}
+              <strong>Language Pack Type:</strong> {currentLocale ? 'Custom Language Pack' : 'Built-in Language Pack'}
             </p>
           </div>
         </div>
@@ -512,10 +299,10 @@ function App() {
 | English (US) | `enUS` | English (United States) |
 | Default | `defaultLocale` | Same as `zhCN` |
 
-### Locale API
+### Language Pack API
 
 ```tsx
-// Import locale utilities
+// Import language pack utilities
 import { LocaleProvider, useLocale, useTranslation } from '@fly-cut/caption-react'
 
 // Use LocaleProvider for nested components
@@ -523,17 +310,314 @@ import { LocaleProvider, useLocale, useTranslation } from '@fly-cut/caption-reac
   <YourComponent />
 </LocaleProvider>
 
-// Access locale context
+// Access language pack context
 const { t, setLanguage, registerLocale } = useLocale()
 
-// Register custom locale
+// Register custom language pack
 registerLocale('fr', frenchLocale)
 
-// Switch language programmatically
+// Programmatic language switching
 setLanguage('fr')
 ```
 
-📚 **Detailed internationalization guide**: See [INTERNATIONALIZATION.md](./INTERNATIONALIZATION.md) for complete documentation on language packs, custom locales, and advanced i18n features.
+📚 **Detailed internationalization guide**: See [INTERNATIONALIZATION.md](./INTERNATIONALIZATION.md) for complete documentation on language packs, custom localization and advanced i18n features.
+
+## 📚 Usage Guide
+
+### 1. Installation & Setup
+
+```bash
+# Install package
+npm install @fly-cut/caption-react
+
+# TypeScript projects don't need additional type packages
+# Type definitions are included
+```
+
+### 2. Import Styles
+
+The component requires CSS styles to work properly:
+
+```tsx
+import '@fly-cut/caption-react/styles'
+// or specific CSS file
+import '@fly-cut/caption-react/dist/caption-react.css'
+```
+
+### 3. Basic Integration
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import '@fly-cut/caption-react/styles'
+
+function VideoEditor() {
+  return (
+    <div className="video-editor-container">
+      <FlyCutCaption />
+    </div>
+  )
+}
+```
+
+### 4. Event Handling
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+
+function VideoEditorWithEvents() {
+  const handleFileSelected = (file: File) => {
+    console.log('Selected file:', file.name, file.size)
+  }
+
+  const handleSubtitleGenerated = (subtitles: SubtitleChunk[]) => {
+    console.log('Generated subtitles:', subtitles.length)
+    // Save subtitles to backend
+    saveSubtitles(subtitles)
+  }
+
+  const handleVideoProcessed = (blob: Blob, filename: string) => {
+    // Handle processed video
+    const url = URL.createObjectURL(blob)
+    // Download or upload to server
+    downloadFile(url, filename)
+  }
+
+  const handleError = (error: Error) => {
+    // Handle errors gracefully
+    console.error('FlyCut Caption error:', error)
+    showErrorNotification(error.message)
+  }
+
+  return (
+    <FlyCutCaption
+      onFileSelected={handleFileSelected}
+      onSubtitleGenerated={handleSubtitleGenerated}
+      onVideoProcessed={handleVideoProcessed}
+      onError={handleError}
+    />
+  )
+}
+```
+
+### 5. Configuration Options
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+
+function ConfiguredEditor() {
+  const config = {
+    // Theme settings
+    theme: 'dark' as const,
+
+    // Language settings
+    language: 'zh-CN',
+    asrLanguage: 'zh',
+
+    // Feature toggles
+    enableDragDrop: true,
+    enableExport: true,
+    enableVideoProcessing: true,
+    enableThemeToggle: true,
+    enableLanguageSelector: true,
+
+    // File constraints
+    maxFileSize: 1000, // 1GB
+    supportedFormats: ['mp4', 'webm', 'mov']
+  }
+
+  return (
+    <FlyCutCaption config={config} />
+  )
+}
+```
+
+### 6. Custom Styling
+
+```tsx
+import { FlyCutCaption } from '@fly-cut/caption-react'
+import './custom-styles.css'
+
+function StyledEditor() {
+  return (
+    <FlyCutCaption
+      className="my-custom-editor"
+      style={{
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      }}
+    />
+  )
+}
+```
+
+```css
+/* custom-styles.css */
+.my-custom-editor {
+  --flycut-primary: #10b981;
+  --flycut-border-radius: 12px;
+}
+
+.my-custom-editor .subtitle-item {
+  border-radius: var(--flycut-border-radius);
+}
+```
+
+## 📖 API Reference
+
+### FlyCutCaptionProps
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `className` | `string` | `undefined` | Custom CSS class name |
+| `style` | `CSSProperties` | `undefined` | Custom inline styles |
+| `config` | `FlyCutCaptionConfig` | `defaultConfig` | Component configuration |
+| `locale` | `FlyCutCaptionLocale` | `undefined` | Custom language pack |
+| `onReady` | `() => void` | `undefined` | Called when component is ready |
+| `onFileSelected` | `(file: File) => void` | `undefined` | Called when a file is selected |
+| `onSubtitleGenerated` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are generated |
+| `onSubtitleChanged` | `(subtitles: SubtitleChunk[]) => void` | `undefined` | Called when subtitles are changed |
+| `onVideoProcessed` | `(blob: Blob, filename: string) => void` | `undefined` | Called when video processing is complete |
+| `onExportComplete` | `(blob: Blob, filename: string) => void` | `undefined` | Called when export is complete |
+| `onError` | `(error: Error) => void` | `undefined` | Called when an error occurs |
+| `onProgress` | `(stage: string, progress: number) => void` | `undefined` | Called to report progress updates |
+| `onLanguageChange` | `(language: string) => void` | `undefined` | Called when language changes |
+
+### FlyCutCaptionConfig
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Theme mode |
+| `language` | `string` | `'zh-CN'` | Interface language |
+| `asrLanguage` | `string` | `'auto'` | ASR recognition language |
+| `enableDragDrop` | `boolean` | `true` | Enable drag and drop file upload |
+| `enableExport` | `boolean` | `true` | Enable export functionality |
+| `enableVideoProcessing` | `boolean` | `true` | Enable video processing functionality |
+| `enableThemeToggle` | `boolean` | `true` | Enable theme toggle button |
+| `enableLanguageSelector` | `boolean` | `true` | Enable language selector |
+| `maxFileSize` | `number` | `500` | Maximum file size in MB |
+| `supportedFormats` | `string[]` | `['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']` | Supported file formats |
+
+## 🎨 Styling
+
+The component comes with built-in styles that you need to import:
+
+```tsx
+import '@fly-cut/caption-react/styles'
+```
+
+You can also customize the appearance by:
+
+1. **CSS Custom Properties**: Override CSS variables for colors and spacing
+2. **Custom CSS Classes**: Use the `className` prop to apply custom styles
+3. **Theme Configuration**: Use the `theme` config option for light/dark modes
+
+### CSS Variables
+
+```css
+:root {
+  --flycut-primary: #3b82f6;
+  --flycut-background: #ffffff;
+  --flycut-foreground: #1f2937;
+  --flycut-muted: #f3f4f6;
+  --flycut-border: #e5e7eb;
+}
+
+.dark {
+  --flycut-background: #111827;
+  --flycut-foreground: #f9fafb;
+  --flycut-muted: #374151;
+  --flycut-border: #4b5563;
+}
+```
+
+## 🏗️ Project Architecture
+
+### Tech Stack
+- **Frontend Framework**: React 19 with Hooks
+- **Type Checking**: TypeScript 5.8
+- **Build Tool**: Vite 7.1
+- **Styling Solution**: Tailwind CSS 4.1 + Shadcn/ui
+- **State Management**: Zustand + React Context
+- **AI Model**: Hugging Face Transformers.js
+- **Video Processing**: WebAV
+- **Internationalization**: react-i18next
+
+### Project Structure
+```
+src/
+├── components/          # UI Components
+│   ├── FileUpload/     # File upload component
+│   ├── VideoPlayer/    # Video player
+│   ├── SubtitleEditor/ # Subtitle editor
+│   ├── ProcessingPanel/ # Processing panel
+│   ├── ExportPanel/    # Export panel
+│   └── ui/             # Basic UI components
+├── hooks/              # Custom Hooks
+├── services/           # Business service layer
+│   ├── asrService.ts   # ASR speech recognition service
+│   └── UnifiedVideoProcessor.ts # Video processing service
+├── stores/             # State management
+│   ├── appStore.ts     # Application global state
+│   ├── historyStore.ts # Subtitle history records
+│   └── themeStore.ts   # Theme state
+├── types/              # TypeScript type definitions
+├── utils/              # Utility functions
+├── workers/            # Web Workers
+│   └── asrWorker.ts    # ASR processing worker thread
+└── locales/            # Internationalization files
+```
+
+### Core Modules
+
+#### ASR Speech Recognition
+- Local speech recognition based on Whisper model
+- Web Workers background processing without blocking main thread
+- Support multiple languages and audio formats
+- Generate precise word-level timestamps
+
+#### Subtitle Editor
+- Visual subtitle segment management
+- Support batch selection and operations
+- Real-time video playback position synchronization
+- History records and undo/redo functionality
+
+#### Video Processing
+- Local video processing based on WebAV
+- Support interval clipping and merging
+- Subtitle burn-in functionality
+- Multiple output formats and quality options
+
+## 🛠️ Development Guide
+
+### Development Commands
+```bash
+# Start development server
+pnpm dev
+
+# Type checking
+pnpm run typecheck
+
+# Code linting
+pnpm lint
+
+# Build project
+pnpm build
+
+# Preview build
+pnpm preview
+```
+
+### Adding New Components
+Project uses Shadcn/ui component library:
+```bash
+pnpm dlx shadcn@latest add <component-name>
+```
+
+### Code Standards
+- TypeScript strict mode
+- ESLint + React related rules
+- Functional components + Hooks
+- Componentized and modular design
 
 ## 🎬 Video Processing
 
@@ -629,7 +713,7 @@ function VideoEditorApp() {
             onError={(error) => {
               console.error('Error:', error)
               // Show user-friendly error message
-              alert('处理过程中出现错误，请重试')
+              alert('An error occurred during processing, please try again')
             }}
           />
         </div>
@@ -638,16 +722,16 @@ function VideoEditorApp() {
           <div className="mt-4 text-center">
             <div className="inline-flex items-center px-4 py-2 bg-blue-100 rounded-lg">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              处理中，请稍候...
+              Processing, please wait...
             </div>
           </div>
         )}
 
         {subtitles.length > 0 && (
           <div className="mt-8 bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">生成的字幕 ({subtitles.length} 条)</h2>
+            <h2 className="text-lg font-semibold mb-4">Generated Subtitles ({subtitles.length} items)</h2>
             <div className="text-sm text-gray-600">
-              字幕已自动保存到本地存储
+              Subtitles have been automatically saved to local storage
             </div>
           </div>
         )}
@@ -691,27 +775,6 @@ export default function EditorPage() {
 }
 ```
 
-### Vite Configuration
-
-```typescript
-// vite.config.ts
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  optimizeDeps: {
-    exclude: ['@huggingface/transformers']
-  },
-  server: {
-    headers: {
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    }
-  }
-})
-```
-
 ### Best Practices
 
 1. **Always import styles**: The component requires CSS to work properly
@@ -721,47 +784,6 @@ export default defineConfig({
 5. **Responsive design**: Ensure your container has appropriate height/width
 6. **Accessibility**: The component includes ARIA labels and keyboard navigation
 7. **Memory management**: Clean up blob URLs when components unmount
-
-### Common Integration Patterns
-
-```tsx
-// With error boundary
-import { ErrorBoundary } from 'react-error-boundary'
-
-function EditorWithErrorBoundary() {
-  return (
-    <ErrorBoundary fallback={<div>Something went wrong with the video editor</div>}>
-      <FlyCutCaption />
-    </ErrorBoundary>
-  )
-}
-
-// With loading state
-function EditorWithLoading() {
-  const [isReady, setIsReady] = useState(false)
-
-  if (!isReady) {
-    return <div>Loading video editor...</div>
-  }
-
-  return (
-    <FlyCutCaption
-      onReady={() => setIsReady(true)}
-    />
-  )
-}
-
-// With custom container
-function ResponsiveEditor() {
-  return (
-    <div className="w-full max-w-6xl mx-auto">
-      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-        <FlyCutCaption />
-      </div>
-    </div>
-  )
-}
-```
 
 ## 🔧 Development
 
@@ -797,13 +819,44 @@ pnpm lint
 cd test-app && pnpm dev
 ```
 
-## 📄 License
-
-MIT © [FlyCut Team](https://github.com/your-username/fly-cut-caption)
-
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions of all kinds!
+
+### How to Contribute
+1. Fork this project
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Create Pull Request
+
+### Contribution Types
+- 🐛 Bug fixes
+- ✨ New feature development
+- 📝 Documentation improvements
+- 🎨 UI/UX optimizations
+- ⚡ Performance optimizations
+- 🌐 Internationalization translations
+
+## 📝 License
+
+This project is licensed under the MIT License with additional terms:
+
+- ✅ **Allowed**: Personal, educational, commercial use
+- ✅ **Allowed**: Modification, distribution, creating derivative works
+- ❌ **Prohibited**: Removing or modifying logos, watermarks, brand elements in the software interface
+- ❌ **Prohibited**: Hiding or tampering with attribution statements
+
+To remove brand elements, please contact FlyCut Team for explicit written permission.
+
+See [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Hugging Face](https://huggingface.co/) - Excellent Transformers.js library
+- [OpenAI Whisper](https://openai.com/research/whisper) - Powerful speech recognition model
+- [Shadcn/ui](https://ui.shadcn.com/) - Elegant UI component library
+- [WebAV](https://github.com/hughfenghen/WebAV) - Powerful web audio/video processing library
 
 ## 📞 Support
 
@@ -813,4 +866,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-Made with ❤️ by the FlyCut Team
+<div align="center">
+
+**If this project helps you, please give us a ⭐ Star!**
+
+Made with ❤️ by FlyCut Team
+
+</div>
