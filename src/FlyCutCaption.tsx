@@ -5,8 +5,8 @@ import { useAppStore } from '@/stores/appStore';
 import { useChunks } from '@/stores/historyStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useHotkeys } from '@/hooks/useHotkeys';
-import { useI18n } from '@/hooks/useI18n';
-import { useTranslation } from 'react-i18next';
+import { LocaleProvider, useTranslation, useLocale } from '@/contexts/LocaleProvider';
+import type { FlyCutCaptionLocale } from '@/locales';
 import { FileUpload } from '@/components/FileUpload/FileUpload';
 import { EnhancedVideoPlayer } from '@/components/VideoPlayer/EnhancedVideoPlayer';
 import type { EnhancedVideoPlayerRef } from '@/components/VideoPlayer/EnhancedVideoPlayer';
@@ -83,6 +83,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
     className,
     style,
     config = {},
+    locale,
     onReady,
     onFileSelected,
     onSubtitleGenerated,
@@ -91,6 +92,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
     onExportComplete,
     onError,
     onProgress,
+    onLanguageChange,
     ...otherProps
   } = props;
 
@@ -110,19 +112,17 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
   const { theme, resolvedTheme, setTheme } = useThemeStore();
 
   // 国际化
-  const { t, ready } = useTranslation();
+  const { t } = useTranslation();
+  const { language, setLanguage, getAvailableLanguages } = useLocale();
 
-  // 如果翻译还没准备好，显示加载状态
-  if (!ready) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // 语言选项
+  const languageOptions = [
+    { code: 'zh', name: '中文', nativeName: '中文' },
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ja', name: 'Japanese', nativeName: '日本語' }
+  ];
+
+  // Component is ready, render the main content
 
   // Component ready effect
   useEffect(() => {
@@ -222,7 +222,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
     options?: VideoProcessingOptions
   ) => {
     if (isProcessing) {
-      console.warn(t('processingVideo', { ns: 'app' }));
+      console.warn(t('messages.fileUpload.processingFile'));
       return;
     }
 
@@ -232,7 +232,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
       setIsProcessing(true);
 
       // 开始视频处理消息
-      messageId = startVideoProcessing(t('videoProcessing', { ns: 'app' }));
+      messageId = startVideoProcessing(t('messages.fileUpload.processingFile'));
       setCurrentProcessingMessageId(messageId);
 
       // 创建处理器（如果不存在）
@@ -295,7 +295,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
   const handleExportSubtitles = useCallback(async (format: 'srt' | 'json') => {
     const keptChunks = chunks.filter(chunk => !chunk.deleted);
     if (keptChunks.length === 0) {
-      console.warn(t('noActiveSubtitles', { ns: 'app' }));
+      console.warn(t('messages.subtitle.emptySubtitleText'));
       return;
     }
 
@@ -363,7 +363,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
   // 开始视频处理
   const handleStartProcessing = useCallback(async (options: VideoProcessingOptions) => {
     if (!videoFile) {
-      console.error(t('noVideoToProcess', { ns: 'app' }));
+      console.error(t('messages.video.videoLoadFailed'));
       return;
     }
 
@@ -376,7 +376,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
         segments: videoSegments?.length,
         error
       });
-      setError(`${t('videoProcessingFailed', { ns: 'app' })}: ${error instanceof Error ? error.message : t('unknownError', { ns: 'messages' })}`);
+      setError(`${t('messages.export.exportFailed')}: ${error instanceof Error ? error.message : t('common.error')}`);
     }
   }, [videoFile, videoSegments, processVideo, setStage, setError, t]);
 
@@ -417,7 +417,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
           <div className="space-y-4">
             {/* 语言选择 */}
             <div>
-              <label className="text-sm font-medium mb-2 block">{t('recognitionLanguage', { ns: 'app' })}</label>
+              <label className="text-sm font-medium mb-2 block">{t('components.asrPanel.language')}</label>
               <ASRPanel />
             </div>
           </div>
@@ -428,10 +428,10 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
           <div className="p-4">
             <h3 className="text-sm font-medium flex items-center space-x-2">
               <FileText className="h-4 w-4" />
-              <span>{t('subtitleEditor', { ns: 'app' })}</span>
+              <span>{t('components.subtitleEditor.title')}</span>
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {t('subtitleEditorDescription', { ns: 'app' })}
+              {t('components.subtitleEditor.title')}
             </p>
           </div>
 
@@ -457,8 +457,8 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                   <Upload className="h-16 w-16 text-primary" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold mb-4">{t('uploadTitle', { ns: 'app' })}</h2>
-              <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: t('uploadDescription', { ns: 'app' }) }} />
+              <h2 className="text-2xl font-bold mb-4">{t('components.fileUpload.selectFile')}</h2>
+              <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: t('components.fileUpload.dragDropText') }} />
             </div>
 
             <FileUpload
@@ -491,7 +491,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
               {isLoading && (
                 <div className="px-2 py-1 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-600 flex items-center space-x-1">
                   <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600" />
-                  <span>{t('processing', { ns: 'common' })}</span>
+                  <span>{t('common.loading')}</span>
                 </div>
               )}
             </div>
@@ -535,12 +535,12 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
       return (
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 p-4 border-b">
-            <h2 className="text-sm font-semibold">{t('subtitleSettings', { ns: 'app' })}</h2>
-            <p className="text-xs text-muted-foreground mt-1">{t('subtitleSettingsDescription', { ns: 'app' })}</p>
+            <h2 className="text-sm font-semibold">{t('components.subtitleEditor.subtitleStyle')}</h2>
+            <p className="text-xs text-muted-foreground mt-1">{t('components.subtitleEditor.subtitleStyle')}</p>
           </div>
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="text-center text-muted-foreground">
-              <div className="text-xs opacity-60">{t('waitingForVideo', { ns: 'app' })}</div>
+              <div className="text-xs opacity-60">{t('common.loading')}</div>
             </div>
           </div>
         </div>
@@ -588,17 +588,32 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                   <Scissors className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold">{t('title', { ns: 'app' })}</h1>
-                  <p className="text-xs text-muted-foreground">{t('subtitle', { ns: 'app' })}</p>
+                  <h1 className="text-lg font-bold">{'FlyCut Caption'}</h1>
+                  <p className="text-xs text-muted-foreground">{'智能视频字幕裁剪工具'}</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4">
                 {/* 语言切换按钮 */}
-                <LanguageSelector variant="minimal" />
+                {mergedConfig.enableLanguageSelector !== false && (
+                  <LanguageSelector
+                    variant="minimal"
+                    currentLanguage={language}
+                    languages={languageOptions}
+                    onLanguageChange={(newLanguage) => {
+                      setLanguage(newLanguage);
+                      // 如果有外部回调，也调用它
+                      if (onLanguageChange) {
+                        onLanguageChange(newLanguage);
+                      }
+                    }}
+                  />
+                )}
 
                 {/* 主题切换按钮 */}
-                <ThemeToggle variant="button" />
+                {mergedConfig.enableThemeToggle !== false && (
+                  <ThemeToggle variant="button" />
+                )}
 
                 {/* 消息中心按钮 */}
                 <MessageCenterButton />
@@ -612,12 +627,12 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                       disabled={false}
                     >
                       <Upload className="h-4 w-4 mr-1.5" />
-                      <span className="hidden sm:inline">{t('fileMenu', { ns: 'app' })}</span>
+                      <span className="hidden sm:inline">{t('common.upload')}</span>
                     </MenubarTrigger>
                     <MenubarContent align="start" className="min-w-[160px]">
                       <MenubarItem onClick={handleReupload}>
                         <Upload className="h-4 w-4 mr-2" />
-                        {t('reuploadVideo', { ns: 'app' })}
+                        {t('common.upload')}
                       </MenubarItem>
                     </MenubarContent>
                   </MenubarMenu>
@@ -629,12 +644,12 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                       disabled={!hasActiveChunks}
                     >
                       <FileText className="h-4 w-4 mr-1.5" />
-                      <span className="hidden sm:inline">{t('subtitleMenu', { ns: 'app' })}</span>
+                      <span className="hidden sm:inline">{t('components.subtitleEditor.title')}</span>
                     </MenubarTrigger>
                     <MenubarContent align="start" className="min-w-[160px]">
                       <MenubarItem onClick={handleOpenSubtitleExportDialog}>
                         <FileText className="h-4 w-4 mr-2" />
-                        {t('exportSubtitle', { ns: 'app' })}
+                        {t('components.exportDialog.exportSubtitle')}
                       </MenubarItem>
                     </MenubarContent>
                   </MenubarMenu>
@@ -647,13 +662,13 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                     >
                       <Video className="h-4 w-4 mr-1.5" />
                       <span className="hidden sm:inline">
-                        {isProcessing ? t('processing', { ns: 'common' }) : t('videoMenu', { ns: 'app' })}
+                        {isProcessing ? t('common.loading') : t('components.exportDialog.exportVideo')}
                       </span>
                     </MenubarTrigger>
                     <MenubarContent align="start" className="min-w-[180px]">
                       <MenubarItem onClick={handleOpenVideoExportDialog}>
                         <Video className="h-4 w-4 mr-2" />
-                        {t('processAndExportVideo', { ns: 'app' })}
+                        {t('components.exportDialog.exportVideo')}
                       </MenubarItem>
                       <MenubarSeparator />
                       <MenubarItem
@@ -661,7 +676,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                         className="data-[disabled]:opacity-50"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        {t('viewInMessageCenter', { ns: 'app' })}
+                        {t('components.messageCenter.title')}
                       </MenubarItem>
                     </MenubarContent>
                   </MenubarMenu>
@@ -706,11 +721,15 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
 
 const FlyCutCaption: React.FC<FlyCutCaptionProps> = (props) => {
   return (
-    <>
+    <LocaleProvider
+      language={props.config?.language || 'zh'}
+      locale={props.locale}
+      onLanguageChange={props.onLanguageChange}
+    >
       <ThemeInitializer />
       <FlyCutCaptionContent {...props} />
       <ToastContainer />
-    </>
+    </LocaleProvider>
   );
 };
 

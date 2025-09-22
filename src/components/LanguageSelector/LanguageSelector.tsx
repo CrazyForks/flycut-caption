@@ -1,5 +1,3 @@
-import { useI18n, SUPPORTED_LANGUAGES } from '@/hooks/useI18n';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,22 +8,36 @@ import {
 import { Languages, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+interface LanguageOption {
+  code: string;
+  name: string;
+  nativeName: string;
+}
+
 interface LanguageSelectorProps {
   className?: string;
   variant?: 'button' | 'minimal';
   showText?: boolean;
+  currentLanguage: string;
+  languages: LanguageOption[];
+  onLanguageChange: (language: string) => void;
 }
 
-export function LanguageSelector({ 
-  className, 
+export function LanguageSelector({
+  className,
   variant = 'button',
-  showText = true 
+  showText = true,
+  currentLanguage,
+  languages,
+  onLanguageChange
 }: LanguageSelectorProps) {
-  const { currentLanguage, changeLanguage, getCurrentLanguageInfo } = useI18n();
-  const currentLangInfo = getCurrentLanguageInfo();
+  const currentLangInfo = languages.find(lang =>
+    lang.code === currentLanguage ||
+    lang.code === currentLanguage.split('-')[0]
+  ) || languages[0];
 
-  const handleLanguageChange = async (languageCode: string) => {
-    await changeLanguage(languageCode as any);
+  const handleLanguageChange = (languageCode: string) => {
+    onLanguageChange(languageCode);
   };
 
   return (
@@ -60,7 +72,7 @@ export function LanguageSelector({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">
-        {SUPPORTED_LANGUAGES.map((language) => (
+        {languages.map((language) => (
           <DropdownMenuItem
             key={language.code}
             onClick={() => handleLanguageChange(language.code)}
@@ -70,7 +82,7 @@ export function LanguageSelector({
               <span className="font-medium">{language.nativeName}</span>
               <span className="text-xs text-muted-foreground">{language.name}</span>
             </div>
-            {currentLanguage === language.code && (
+            {(currentLanguage === language.code || currentLanguage.startsWith(language.code)) && (
               <Check className="h-4 w-4 text-primary" />
             )}
           </DropdownMenuItem>

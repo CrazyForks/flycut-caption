@@ -71,6 +71,10 @@ export interface FlyCutCaptionConfig {
   enableExport?: boolean
   /** Enable video processing functionality */
   enableVideoProcessing?: boolean
+  /** Enable theme toggle button */
+  enableThemeToggle?: boolean
+  /** Enable language selector */
+  enableLanguageSelector?: boolean
   /** Maximum file size in MB */
   maxFileSize?: number
   /** Supported file formats */
@@ -85,6 +89,8 @@ export interface FlyCutCaptionProps {
   style?: CSSProperties
   /** Component configuration */
   config?: FlyCutCaptionConfig
+  /** Custom locale data */
+  locale?: any  // FlyCutCaptionLocale type will be imported later
   /** Called when component is ready */
   onReady?: () => void
   /** Called when a file is selected */
@@ -101,6 +107,8 @@ export interface FlyCutCaptionProps {
   onError?: (error: Error) => void
   /** Called to report progress updates */
   onProgress?: (stage: string, progress: number) => void
+  /** Called when language changes */
+  onLanguageChange?: (language: string) => void
 }
 
 // Default configuration
@@ -111,6 +119,8 @@ export const defaultConfig: Required<FlyCutCaptionConfig> = {
   enableDragDrop: true,
   enableExport: true,
   enableVideoProcessing: true,
+  enableThemeToggle: true,
+  enableLanguageSelector: true,
   maxFileSize: 500, // MB
   supportedFormats: ['mp4', 'webm', 'avi', 'mov', 'mp3', 'wav', 'ogg']
 }

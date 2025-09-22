@@ -26,6 +26,18 @@ export { defaultConfig } from './types'
 export { formatTime } from './utils/timeUtils'
 export { isVideoFile, formatFileSize } from './utils/fileUtils'
 
+// Locale exports
+export {
+  LocaleProvider,
+  useLocale,
+  useTranslation,
+  zhCN,
+  enUS,
+  defaultLocale
+} from './contexts/LocaleProvider'
+
+export type { FlyCutCaptionLocale } from './locales'
+
 // Version info
 export const version = '1.0.0'
 

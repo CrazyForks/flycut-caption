@@ -18,7 +18,7 @@
 - **🎬 实时视频预览**：与字幕同步的视频播放器，支持区间播放
 - **📤 多格式导出**：支持 SRT、JSON 字幕格式以及视频文件导出
 - **🎨 字幕样式定制**：自定义字幕字体、颜色、位置等样式
-- **🌐 国际化支持**：支持中文和英文界面切换
+- **🌐 国际化支持**：组件化国际化设计，支持中文、英文、自定义语言包（如日语示例）
 
 ### 🔧 技术特色
 - **⚡ 现代化技术栈**：React 19 + TypeScript + Vite + Tailwind CSS
@@ -116,6 +116,158 @@ pnpm preview
   - 可选择烧录字幕到视频
   - 支持不同质量设置
   - 多种格式输出
+
+## 🌐 国际化设计
+
+FlyCut Caption 采用组件化国际化设计，支持灵活的语言包管理和实时语言切换。
+
+### 支持的语言
+- **中文（简体）**：内置语言包，完整翻译
+- **英文（美式）**：内置语言包，完整翻译
+- **自定义语言**：支持添加任意语言包（提供日语示例）
+
+### 组件化国际化特性
+- **自动同步**：外部语言切换自动同步到内部组件
+- **类型安全**：完整的 TypeScript 类型定义
+- **按需加载**：语言包可按需导入
+- **扩展性强**：支持自定义语言包和动态注册
+
+### 使用示例
+
+#### 基础用法
+```tsx
+import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
+
+// 使用中文语言包
+<FlyCutCaption
+  config={{ language: 'zh' }}
+  locale={zhCN}
+/>
+
+// 使用英文语言包
+<FlyCutCaption
+  config={{ language: 'en' }}
+  locale={enUS}
+/>
+```
+
+#### 自定义语言包
+```tsx
+import { FlyCutCaption, type FlyCutCaptionLocale } from '@flycut/caption-react'
+
+// 创建日语语言包示例
+const customJaJP: FlyCutCaptionLocale = {
+  common: {
+    loading: '読み込み中...',
+    error: 'エラー',
+    success: '成功',
+    // ... 更多通用翻译
+  },
+  components: {
+    fileUpload: {
+      dragDropText: 'ビデオファイルをここにドラッグするか、クリックして選択',
+      selectFile: 'ファイルを選択',
+      // ... 更多组件翻译
+    },
+    // ... 其他组件翻译
+  },
+  messages: {
+    // ... 消息翻译
+  }
+}
+
+// 使用自定义语言包
+<FlyCutCaption
+  config={{ language: 'ja' }}
+  locale={customJaJP}
+/>
+```
+
+#### 动态语言切换
+```tsx
+import { useState } from 'react'
+import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
+
+function App() {
+  const [currentLanguage, setCurrentLanguage] = useState('zh')
+  const [currentLocale, setCurrentLocale] = useState(undefined)
+
+  const handleLanguageChange = (language: string) => {
+    setCurrentLanguage(language)
+
+    // 根据语言设置相应的语言包
+    switch (language) {
+      case 'zh':
+        setCurrentLocale(zhCN)
+        break
+      case 'en':
+        setCurrentLocale(enUS)
+        break
+      case 'ja':
+        setCurrentLocale(customJaJP)
+        break
+      default:
+        setCurrentLocale(undefined) // 使用默认语言包
+    }
+  }
+
+  return (
+    <div>
+      {/* 外部语言切换按钮 */}
+      <div>
+        <button onClick={() => handleLanguageChange('zh')}>中文</button>
+        <button onClick={() => handleLanguageChange('en')}>English</button>
+        <button onClick={() => handleLanguageChange('ja')}>日本語</button>
+      </div>
+
+      {/* FlyCut Caption 组件 */}
+      <FlyCutCaption
+        config={{
+          language: currentLanguage,
+          enableLanguageSelector: true // 内部语言选择器会自动同步
+        }}
+        locale={currentLocale}
+        onLanguageChange={handleLanguageChange} // 内部变化同步到外部状态
+      />
+    </div>
+  )
+}
+```
+
+### 语言包结构
+```typescript
+interface FlyCutCaptionLocale {
+  common: {
+    loading: string
+    error: string
+    success: string
+    // ... 更多通用字段
+  }
+  components: {
+    fileUpload: {
+      dragDropText: string
+      selectFile: string
+      // ... 更多文件上传字段
+    }
+    subtitleEditor: {
+      title: string
+      addSubtitle: string
+      // ... 更多字幕编辑器字段
+    }
+    // ... 其他组件
+  }
+  messages: {
+    fileUpload: {
+      uploadSuccess: string
+      uploadFailed: string
+      // ... 更多消息字段
+    }
+    // ... 其他消息类型
+  }
+}
+```
+
+📚 **详细国际化指南**：查看 [INTERNATIONALIZATION.md](./INTERNATIONALIZATION.md) 了解完整的语言包、自定义本地化和高级国际化功能文档。
 
 ## 🏗️ 项目架构
 

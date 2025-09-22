@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { FlyCutCaption } from './index'
-import { zhCN, enUS, type FlyCutCaptionLocale } from './contexts/LocaleProvider'
+// 使用别名导入构建产物
+// @ts-ignore - 临时忽略类型检查
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@flycut-dist/index.js'
+// 引用构建后的样式
+import '@flycut-dist/caption-react.css'
 
-// 创建自定义语言包示例 - 日语
+// 创建自定义语言包示例
 const customJaJP: FlyCutCaptionLocale = {
   common: {
     loading: '読み込み中...',
@@ -343,14 +346,8 @@ const customJaJP: FlyCutCaptionLocale = {
       experimentalFeature: '実験的機能',
     },
   },
-}
+};
 
-/**
- * App Component - Demo App using FlyCutCaption
- *
- * This is the main demo application that demonstrates componentized internationalization.
- * It shows how to integrate custom locale packages and provide language switching UI.
- */
 function App() {
   const [currentLanguage, setCurrentLanguage] = useState('zh')
   const [currentLocale, setCurrentLocale] = useState<FlyCutCaptionLocale | undefined>(undefined)
@@ -382,12 +379,12 @@ function App() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold text-center mb-8">
-          FlyCut Caption 国际化演示
+          FlyCut Caption 国际化测试
         </h1>
 
         <div className="mb-8 text-center space-y-4">
           <div>
-            <h2 className="text-xl font-semibold mb-4">语言切换</h2>
+            <h2 className="text-xl font-semibold mb-4">语言切换示例</h2>
             <div className="flex justify-center gap-4">
               <button
                 className={`px-4 py-2 rounded ${currentLanguage === 'zh' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
@@ -425,7 +422,9 @@ function App() {
           <FlyCutCaption
             config={{
               theme: 'light',
-              language: currentLanguage
+              language: currentLanguage,
+              enableThemeToggle: true,
+              enableLanguageSelector: true
             }}
             locale={currentLocale}
             onLanguageChange={handleLanguageChange}
@@ -434,24 +433,6 @@ function App() {
             }}
             onProgress={(stage, progress) => {
               console.log(`Progress: ${stage} - ${progress}%`)
-            }}
-            onReady={() => {
-              console.log('FlyCut Caption is ready')
-            }}
-            onFileSelected={(file) => {
-              console.log('File selected:', file.name)
-            }}
-            onSubtitleGenerated={(subtitles) => {
-              console.log('Subtitles generated:', subtitles.length)
-            }}
-            onSubtitleChanged={(subtitles) => {
-              console.log('Subtitles changed:', subtitles.length)
-            }}
-            onVideoProcessed={(blob, filename) => {
-              console.log('Video processed:', filename, blob.size, 'bytes')
-            }}
-            onExportComplete={(blob, filename) => {
-              console.log('Export complete:', filename, blob.size, 'bytes')
             }}
           />
         </div>
@@ -463,7 +444,7 @@ function App() {
             <li>• <strong>自定义语言包</strong>：日语(ja/ja-JP) - 展示如何添加新语言</li>
             <li>• <strong>动态切换</strong>：点击上方按钮可实时切换语言</li>
             <li>• <strong>类型安全</strong>：TypeScript 完整类型定义</li>
-            <li>• <strong>组件化设计</strong>：独立的语言切换和状态管理</li>
+            <li>• <strong>Ant Design 风格</strong>：类似 antd 的 locale 导入方式</li>
           </ul>
         </div>
       </div>

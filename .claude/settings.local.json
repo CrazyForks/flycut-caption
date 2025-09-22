@@ -46,7 +46,8 @@
       "Bash(/Users/zhangxiangchen/Code/demo/fly-cut-caption/build-lib.sh)",
       "Bash(./build-lib.sh:*)",
       "WebFetch(domain:react.i18next.com)",
-      "WebFetch(domain:www.i18next.com)"
+      "WebFetch(domain:www.i18next.com)",
+      "Bash(pnpm install:*)"
     ],
     "deny": [],
     "ask": [],

@@ -1,14 +1,13 @@
+// 组件专用的独立 i18n 实例
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 
-// 导入中文翻译资源
+// 导入翻译资源
 import zhCommon from '@/locales/zh/common.json';
 import zhApp from '@/locales/zh/app.json';
 import zhComponents from '@/locales/zh/components.json';
 import zhMessages from '@/locales/zh/messages.json';
 
-// 导入英文翻译资源
 import enCommon from '@/locales/en/common.json';
 import enApp from '@/locales/en/app.json';
 import enComponents from '@/locales/en/components.json';
@@ -30,52 +29,38 @@ const resources = {
   }
 };
 
-// i18n 配置
-i18n
-  .use(LanguageDetector)
+// 创建独立的 i18n 实例，避免与主应用冲突
+const componentI18n = i18n.createInstance();
+
+componentI18n
   .use(initReactI18next)
   .init({
     // 默认语言和回退策略
     fallbackLng: 'zh',
-    
+
     // 默认命名空间
     defaultNS: 'common',
-    
-    // 调试模式
-    debug: true,
-    
-    // 语言检测配置
-    detection: {
-      // 检测优先级：localStorage > navigator语言 > 默认语言
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      // 缓存用户语言选择
-      caches: ['localStorage'],
-      // localStorage 键名
-      lookupLocalStorage: 'i18nextLng',
-      // 转换函数
-      convertDetectedLanguage: (lng: string) => {
-        // 将所有中文变体转换为 zh
-        if (lng.startsWith('zh')) return 'zh';
-        // 将所有英文变体转换为 en  
-        if (lng.startsWith('en')) return 'en';
-        return lng;
-      }
-    },
-    
+
+    // 关闭调试模式（在生产环境中）
+    debug: false,
+
     // 插值配置
     interpolation: {
       escapeValue: false // React 已经默认转义
     },
-    
+
     // 翻译资源
     resources,
-    
+
     // 返回对象配置
     returnObjects: false,
-    
+
     // 后备配置
     returnEmptyString: false,
-    returnNull: false
+    returnNull: false,
+
+    // 不进行语言检测，由组件 props 控制
+    lng: 'zh' // 默认中文
   });
 
-export default i18n;
+export default componentI18n;
