@@ -47,7 +47,8 @@
       "Bash(./build-lib.sh:*)",
       "WebFetch(domain:react.i18next.com)",
       "WebFetch(domain:www.i18next.com)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(npm:*)"
     ],
     "deny": [],
     "ask": [],

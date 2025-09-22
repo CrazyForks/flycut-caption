@@ -1,5 +1,5 @@
 {
-  "name": "@flycut/caption-react",
+  "name": "@fly-cut/caption-react",
   "private": false,
   "version": "1.0.0",
   "type": "module",
@@ -8,8 +8,12 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist",
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/caption-react.css",
+    "dist/index.js.map",
     "README.md",
+    "README.zh.md",
     "LICENSE"
   ],
   "exports": {

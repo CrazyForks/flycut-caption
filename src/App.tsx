@@ -379,95 +379,38 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold text-center mb-8">
-          FlyCut Caption 国际化演示
-        </h1>
-
-        <div className="mb-8 text-center space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">语言切换</h2>
-            <div className="flex justify-center gap-4">
-              <button
-                className={`px-4 py-2 rounded ${currentLanguage === 'zh' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                onClick={() => handleLanguageChange('zh')}
-              >
-                中文 (内置)
-              </button>
-              <button
-                className={`px-4 py-2 rounded ${currentLanguage === 'en' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                onClick={() => handleLanguageChange('en')}
-              >
-                English (内置)
-              </button>
-              <button
-                className={`px-4 py-2 rounded ${currentLanguage === 'ja' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                onClick={() => handleLanguageChange('ja')}
-              >
-                日本語 (自定义)
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="text-sm">
-              <strong>当前语言:</strong> {currentLanguage}
-            </p>
-            <p className="text-sm">
-              <strong>语言包类型:</strong> {currentLocale ? '自定义语言包' : '内置语言包'}
-            </p>
-          </div>
-        </div>
-
-        <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">FlyCut Caption 组件</h2>
-          <FlyCutCaption
-            config={{
-              theme: 'light',
-              language: currentLanguage
-            }}
-            locale={currentLocale}
-            onLanguageChange={handleLanguageChange}
-            onError={(error) => {
-              console.error('Component error:', error)
-            }}
-            onProgress={(stage, progress) => {
-              console.log(`Progress: ${stage} - ${progress}%`)
-            }}
-            onReady={() => {
-              console.log('FlyCut Caption is ready')
-            }}
-            onFileSelected={(file) => {
-              console.log('File selected:', file.name)
-            }}
-            onSubtitleGenerated={(subtitles) => {
-              console.log('Subtitles generated:', subtitles.length)
-            }}
-            onSubtitleChanged={(subtitles) => {
-              console.log('Subtitles changed:', subtitles.length)
-            }}
-            onVideoProcessed={(blob, filename) => {
-              console.log('Video processed:', filename, blob.size, 'bytes')
-            }}
-            onExportComplete={(blob, filename) => {
-              console.log('Export complete:', filename, blob.size, 'bytes')
-            }}
-          />
-        </div>
-
-        <div className="mt-8 bg-muted p-4 rounded-lg">
-          <h3 className="font-semibold mb-2">使用说明：</h3>
-          <ul className="text-sm space-y-1">
-            <li>• <strong>内置语言包</strong>：中文(zh/zh-CN)、英文(en/en-US)</li>
-            <li>• <strong>自定义语言包</strong>：日语(ja/ja-JP) - 展示如何添加新语言</li>
-            <li>• <strong>动态切换</strong>：点击上方按钮可实时切换语言</li>
-            <li>• <strong>类型安全</strong>：TypeScript 完整类型定义</li>
-            <li>• <strong>组件化设计</strong>：独立的语言切换和状态管理</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <FlyCutCaption
+      config={{
+        theme: 'light',
+        language: currentLanguage
+      }}
+      locale={currentLocale}
+      onLanguageChange={handleLanguageChange}
+      onError={(error) => {
+        console.error('Component error:', error)
+      }}
+      onProgress={(stage, progress) => {
+        console.log(`Progress: ${stage} - ${progress}%`)
+      }}
+      onReady={() => {
+        console.log('FlyCut Caption is ready')
+      }}
+      onFileSelected={(file) => {
+        console.log('File selected:', file.name)
+      }}
+      onSubtitleGenerated={(subtitles) => {
+        console.log('Subtitles generated:', subtitles.length)
+      }}
+      onSubtitleChanged={(subtitles) => {
+        console.log('Subtitles changed:', subtitles.length)
+      }}
+      onVideoProcessed={(blob, filename) => {
+        console.log('Video processed:', filename, blob.size, 'bytes')
+      }}
+      onExportComplete={(blob, filename) => {
+        console.log('Export complete:', filename, blob.size, 'bytes')
+      }}
+    />
   )
 }
 
