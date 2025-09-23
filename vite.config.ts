@@ -39,32 +39,13 @@ export default defineConfig(({ mode }) => {
           external: [
             'react',
             'react-dom',
-            'react/jsx-runtime',
-            'react-i18next',
-            'i18next',
-            'i18next-browser-languagedetector',
-            'zustand',
-            'class-variance-authority',
-            'clsx',
-            'tailwind-merge',
-            'lucide-react',
-            '@huggingface/transformers',
-            '@webav/av-cliper',
-            '@webav/av-recorder',
-            'hotkeys-js',
-            'ahooks',
-            'next-themes',
-            'sonner'
+            'react/jsx-runtime'
           ],
           output: {
             globals: {
               'react': 'React',
               'react-dom': 'ReactDOM',
-              'react/jsx-runtime': 'React.jsxRuntime',
-              'react-i18next': 'ReactI18next',
-              'i18next': 'i18next',
-              'zustand': 'zustand',
-              'lucide-react': 'LucideReact'
+              'react/jsx-runtime': 'React.jsxRuntime'
             }
           }
         },
