@@ -37,8 +37,8 @@
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/your-username/fly-cut-caption.git
-cd fly-cut-caption
+git clone https://github.com/x007xyz/flycut.git
+cd flycut
 ```
 
 2. **安装依赖**
@@ -124,7 +124,7 @@ FlyCut Caption 采用组件化国际化设计，支持灵活的语言包管理�
 ### 内置语言包
 
 ```tsx
-import { FlyCutCaption, zhCN, enUS } from '@fly-cut/caption-react'
+import { FlyCutCaption, zhCN, enUS } from '@flycut/caption-react'
 
 // 使用内置中文语言包
 <FlyCutCaption
@@ -142,7 +142,7 @@ import { FlyCutCaption, zhCN, enUS } from '@fly-cut/caption-react'
 ### 自定义语言包
 
 ```tsx
-import { FlyCutCaption, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
+import { FlyCutCaption, type FlyCutCaptionLocale } from '@flycut/caption-react'
 
 // 创建自定义语言包（日语示例）
 const customJaJP: FlyCutCaptionLocale = {
@@ -193,7 +193,7 @@ const customJaJP: FlyCutCaptionLocale = {
 
 ```tsx
 import { useState } from 'react'
-import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@flycut/caption-react'
 
 function App() {
   const [currentLanguage, setCurrentLanguage] = useState('zh')
@@ -303,7 +303,7 @@ function App() {
 
 ```tsx
 // 导入语言包工具
-import { LocaleProvider, useLocale, useTranslation } from '@fly-cut/caption-react'
+import { LocaleProvider, useLocale, useTranslation } from '@flycut/caption-react'
 
 // 为嵌套组件使用 LocaleProvider
 <LocaleProvider language="zh" locale={zhCN}>
@@ -328,7 +328,7 @@ setLanguage('fr')
 
 ```bash
 # 安装包
-npm install @fly-cut/caption-react
+npm install @flycut/caption-react
 
 # TypeScript 项目无需额外类型包
 # 类型定义已包含在内
@@ -339,16 +339,16 @@ npm install @fly-cut/caption-react
 组件需要 CSS 样式才能正常工作：
 
 ```tsx
-import '@fly-cut/caption-react/styles'
+import '@flycut/caption-react/styles'
 // 或指定 CSS 文件
-import '@fly-cut/caption-react/dist/caption-react.css'
+import '@flycut/caption-react/dist/caption-react.css'
 ```
 
 ### 3. 基础集成
 
 ```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
-import '@fly-cut/caption-react/styles'
+import { FlyCutCaption } from '@flycut/caption-react'
+import '@flycut/caption-react/styles'
 
 function VideoEditor() {
   return (
@@ -362,7 +362,7 @@ function VideoEditor() {
 ### 4. 事件处理
 
 ```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
+import { FlyCutCaption } from '@flycut/caption-react'
 
 function VideoEditorWithEvents() {
   const handleFileSelected = (file: File) => {
@@ -402,7 +402,7 @@ function VideoEditorWithEvents() {
 ### 5. 配置选项
 
 ```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
+import { FlyCutCaption } from '@flycut/caption-react'
 
 function ConfiguredEditor() {
   const config = {
@@ -434,7 +434,7 @@ function ConfiguredEditor() {
 ### 6. 自定义样式
 
 ```tsx
-import { FlyCutCaption } from '@fly-cut/caption-react'
+import { FlyCutCaption } from '@flycut/caption-react'
 import './custom-styles.css'
 
 function StyledEditor() {
@@ -502,7 +502,7 @@ function StyledEditor() {
 组件自带内置样式，需要导入：
 
 ```tsx
-import '@fly-cut/caption-react/styles'
+import '@flycut/caption-react/styles'
 ```
 
 您也可以通过以下方式自定义外观：
@@ -648,8 +648,8 @@ pnpm dlx shadcn@latest add <component-name>
 
 ```tsx
 import React, { useState, useCallback } from 'react'
-import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@fly-cut/caption-react'
-import '@fly-cut/caption-react/styles'
+import { FlyCutCaption, zhCN, enUS, type FlyCutCaptionLocale } from '@flycut/caption-react'
+import '@flycut/caption-react/styles'
 
 function VideoEditorApp() {
   const [language, setLanguage] = useState<'zh' | 'en'>('zh')
@@ -752,7 +752,7 @@ import { useState } from 'react'
 
 // 动态导入以避免 SSR 问题
 const FlyCutCaption = dynamic(
-  () => import('@fly-cut/caption-react').then(mod => mod.FlyCutCaption),
+  () => import('@flycut/caption-react').then(mod => mod.FlyCutCaption),
   { ssr: false }
 )
 
@@ -795,8 +795,8 @@ export default function EditorPage() {
 ### 设置
 
 ```bash
-git clone https://github.com/your-username/fly-cut-caption.git
-cd fly-cut-caption
+git clone https://github.com/x007xyz/flycut.git
+cd flycut
 pnpm install
 ```
 
@@ -861,7 +861,7 @@ cd test-app && pnpm dev
 ## 📞 支持
 
 - 📧 邮箱: x007xyzabc@gmail.com
-- 🐛 问题反馈: [GitHub Issues](https://github.com/your-username/fly-cut-caption/issues)
+- 🐛 问题反馈: [GitHub Issues](https://github.com/x007xyz/flycut/issues)
 - 📖 文档: [API 文档](https://flycut.dev/docs)
 
 ---

@@ -1,5 +1,5 @@
 {
-  "name": "@fly-cut/caption-react",
+  "name": "@flycut/caption-react",
   "private": false,
   "version": "1.0.0",
   "type": "module",
@@ -39,13 +39,13 @@
   ],
   "author": "FlyCut Team",
   "license": "MIT",
-  "homepage": "https://github.com/your-username/fly-cut-caption",
+  "homepage": "https://github.com/x007xyz/flycut",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/fly-cut-caption.git"
+    "url": "https://github.com/x007xyz/flycut.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/fly-cut-caption/issues"
+    "url": "https://github.com/x007xyz/flycut/issues"
   },
   "scripts": {
     "dev": "vite",

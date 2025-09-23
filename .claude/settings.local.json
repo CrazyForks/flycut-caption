@@ -48,7 +48,8 @@
       "WebFetch(domain:react.i18next.com)",
       "WebFetch(domain:www.i18next.com)",
       "Bash(pnpm install:*)",
-      "Bash(npm:*)"
+      "Bash(npm:*)",
+      "Bash(git remote set-url:*)"
     ],
     "deny": [],
     "ask": [],
