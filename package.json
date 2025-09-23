@@ -39,13 +39,13 @@
   ],
   "author": "FlyCut Team",
   "license": "MIT",
-  "homepage": "https://github.com/x007xyz/flycut",
+  "homepage": "https://github.com/x007xyz/flycut-caption",
   "repository": {
     "type": "git",
-    "url": "https://github.com/x007xyz/flycut.git"
+    "url": "https://github.com/x007xyz/flycut-caption.git"
   },
   "bugs": {
-    "url": "https://github.com/x007xyz/flycut/issues"
+    "url": "https://github.com/x007xyz/flycut-caption/issues"
   },
   "scripts": {
     "dev": "vite",

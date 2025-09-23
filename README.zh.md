@@ -37,8 +37,8 @@
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/x007xyz/flycut.git
-cd flycut
+git clone https://github.com/x007xyz/flycut-caption.git
+cd flycut-caption
 ```
 
 2. **安装依赖**
@@ -795,8 +795,8 @@ export default function EditorPage() {
 ### 设置
 
 ```bash
-git clone https://github.com/x007xyz/flycut.git
-cd flycut
+git clone https://github.com/x007xyz/flycut-caption.git
+cd flycut-caption
 pnpm install
 ```
 
@@ -861,7 +861,7 @@ cd test-app && pnpm dev
 ## 📞 支持
 
 - 📧 邮箱: x007xyzabc@gmail.com
-- 🐛 问题反馈: [GitHub Issues](https://github.com/x007xyz/flycut/issues)
+- 🐛 问题反馈: [GitHub Issues](https://github.com/x007xyz/flycut-caption/issues)
 - 📖 文档: [API 文档](https://flycut.dev/docs)
 
 ---

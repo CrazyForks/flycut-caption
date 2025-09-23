@@ -37,8 +37,8 @@ A powerful AI-driven video subtitle editing tool focused on intelligent subtitle
 
 1. **Clone the project**
 ```bash
-git clone https://github.com/x007xyz/flycut.git
-cd flycut
+git clone https://github.com/x007xyz/flycut-caption.git
+cd flycut-caption
 ```
 
 2. **Install dependencies**
@@ -795,8 +795,8 @@ export default function EditorPage() {
 ### Setup
 
 ```bash
-git clone https://github.com/x007xyz/flycut.git
-cd flycut
+git clone https://github.com/x007xyz/flycut-caption.git
+cd flycut-caption
 pnpm install
 ```
 
@@ -861,7 +861,7 @@ See [LICENSE](LICENSE) file for details.
 ## 📞 Support
 
 - 📧 Email: x007xyzabc@gmail.com
-- 🐛 Issues: [GitHub Issues](https://github.com/x007xyz/flycut/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/x007xyz/flycut-caption/issues)
 - 📖 Documentation: [API Docs](https://flycut.dev/docs)
 
 ---
