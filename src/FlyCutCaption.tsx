@@ -589,7 +589,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold">{'FlyCut Caption'}</h1>
-                  <p className="text-xs text-muted-foreground">{'智能视频字幕裁剪工具'}</p>
+                  <p className="text-xs text-muted-foreground">{'Intelligent video subtitle cropping tool'}</p>
                 </div>
               </div>
 
@@ -722,7 +722,7 @@ function FlyCutCaptionContent(props: FlyCutCaptionProps) {
 const FlyCutCaption: React.FC<FlyCutCaptionProps> = (props) => {
   return (
     <LocaleProvider
-      language={props.config?.language || 'zh'}
+      language={props.config?.language || 'en'}
       locale={props.locale}
       onLanguageChange={props.onLanguageChange}
     >
