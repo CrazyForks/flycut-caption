@@ -851,6 +851,14 @@ cd test-app && pnpm dev
 
 详情请参阅 [LICENSE](LICENSE) 文件。
 
+## 🌐 托管声明
+
+本项目由阿里云 ESA 提供加速、计算和保护。
+
+![阿里云 ESA Pages](/public/esa-banner.png)
+
+> 阿里云 ESA Pages - 构建、加速并保护你的网站
+
 ## 🙏 致谢
 
 - [Hugging Face](https://huggingface.co/) - 提供优秀的 Transformers.js 库
