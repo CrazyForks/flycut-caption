@@ -164,7 +164,7 @@ export function FileUpload({ className, onFileSelect }: FileUploadProps) {
     setIsProcessing(true);
 
     try {
-      const demoUrl = "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/whisper-timestamps-demo.mp4";
+      const demoUrl = "https://fly-cut.oss-cn-hangzhou.aliyuncs.com/demo/whisper-timestamps-demo.mp4";
 
       // 获取远程视频文件
       const response = await fetch(demoUrl);
