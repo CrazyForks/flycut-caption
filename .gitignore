@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 models/*
+public/whisper-timestamps-demo.mp4
 
 # Editor directories and files
 .vscode/*
